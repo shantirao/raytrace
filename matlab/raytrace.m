@@ -144,7 +144,7 @@ elseif iscell(surface) % series
        end
        trace{i+1} = rays;
     end
-elseif (~isfield(options,'segments') || (isfield(options('segments') && options.segments))) && ...
+elseif (~isfield(options,'segments') || (isfield(options,'segments') && options.segments)) && ...
     isfield(surface,'segments') && iscell(surface.segments) && numel(surface.segments) 
 % parallel
     if (isfield(options,'parallel') && options.parallel)
