@@ -68,7 +68,7 @@ if Nr == 0
     rays.opl = 0;
     rays.position = position;
     rays.local = local;
-    rays.direction = direction;
+    rays.direction = direction * RefIndex;
     rays.n2 = RefIndex^2;
     rays.N = 1;
     rays.map = [0 0];
@@ -77,6 +77,7 @@ if Nr == 0
 else
     % uniform grid sampling by angle
     dU = radius*(-Nr:Nr)/Nr;
+    rays.samplingDistance = dU(2)-dU(1);
     [Ux,Uy] = meshgrid(dU,dU);
     include = (Ux.^2+Uy.^2) <= radius^2;
     [r,c] =find( include );

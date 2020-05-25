@@ -64,7 +64,7 @@ rays.n2 = RefIndex^2;
 rays.N = N;
 rays.map = [r c]; %full(sparse(r,c,1:N));
 rays.maskSize = [max(r), max(c)];
-
+rays.valid = true(N,1);
 
 z = direction' * RefIndex;
 for i=1:N
@@ -74,6 +74,6 @@ for i=1:N
    rays.direction(i,:) = rotationMatrix(axis,angle) * z;
  %  rays.direction(i,:) = QRotMatrix(th) * z;
 end
-
+    
 end
 

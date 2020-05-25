@@ -25,7 +25,6 @@ direction = (rays.direction); % could be a gpuArray
 if ~isfield(rays,'status'), rays.status = ones(nRays,1); end
 if ~isfield(rays,'valid'), rays.valid = true(nRays,1); end
 if isfield(rays,'n2'), n2 = rays.n2; else n2=1; end
-if isfield(rays,'n'), n = rays.n; else n=1; end
 if isfield(rays,'polarization')
     polarization = [ones(1,nRays) zeros(nRays,3)] ;
 end
@@ -46,9 +45,24 @@ isASphere = isfield(surface,'asphere') ;
 isDistorted = isfield(surface,'deformation');
 isNotSimple = isASphere || isDistorted;
 
-%in this branch, N is the surface normal vector. For planes it's a
-%single vector. For curved surfaces, it's Nx3, a 3-vector for each
-%intersection point.
+% in this branch, N is the surface normal vector. For planes it's a
+% single vector. For curved surfaces, it's Nx3, a 3-vector for each
+% intersection point.
+% Bill Breckinridge at JPL used the equations to find the exact intersectio
+% of a ray with a conic surface for the MACOS program, which was too much
+% trouble to understand in FORTRAN, so I started over.
+% Aspheres and other distortions are handled by iteratively transferring
+% the surface intersection to a local tangent plane. It's arduous to do it
+% in closed form, so you don't often see it derived in optics textbooks.
+% It's just geometry. Iteration proceeds until the precision target
+% (default 1e-14 of whatever units you're using) is reached.
+
+%% find the Ray-Surface Intersection (RSI)
+% note: N is the local surface normal at the point of intersection, with
+% length 1. The ray directions are the length of the index of refraction.
+% The ray bundle also carries around "n2", or "index squared" for the
+% current medium. 
+% surface.n is the index of refraction of the next medium
 if isFlat && ~isNotSimple % simple plane
    N = surface.direction; 
    bo = (N * direction')' ;
@@ -72,7 +86,7 @@ if isFlat && ~isNotSimple % simple plane
     rays.NA = (max(nsint)-min(nsint))/2;
    end 
 
-else %not simple: distorted flat, or a conic  
+else %not simple: distorted flat, or a conic, or an asphere  
     % Initialize sign conventions
     if isFlat
         c = 0;
@@ -167,7 +181,9 @@ else %not simple: distorted flat, or a conic
         N = bsxfun(@times,Nv,(1-K*(Nv*cP')'))-cP;
     end
 
-    %asphere terms or deformation; iterative solution
+    %asphere terms or deformation; iterative solution for both elevation
+    %and the surface angle. You could do asphere=[x] to see if it matches
+    %a parabola exactly.
     if isNotSimple 
         oldP = P;
         c2 = c*c;
@@ -181,9 +197,9 @@ else %not simple: distorted flat, or a conic
             s2 = sum(tangentProjection.^2,2);
             if j==1
                 z = elevation;
-            else
+            else % base elevation from tangent plane 
                 if c == 0 % plane
-                    z = 0 * elevation;
+                    z = zeros(size(elevation)); % 0 * elevation;
                 else
                     z = c*s2./(1+sqrt(1-(k1c2*s2)));
                 end
@@ -194,17 +210,20 @@ else %not simple: distorted flat, or a conic
                 % N is the local surface-normal vector
             end            
 
-            sn = sgn;
-            radialDerivative = zeros(nRays,1); 
+            sn = sgn; %concave or convex? establishes sign of s^n
+                      %s2 is the square of the radius (aspheres are
+                      %axially symmetric)
             Pnear = P;
-            %iterative corrections: change Pnear and N
+            % iterative corrections: change Pnear and N
+            % the height change is dz. The radial derivative is used to
+            % adjust the normal vector
             if isASphere
                 %aspheric component of curvature, for adding to the normal
                 %vector  z(s) = a2 s^2 + a4 s^4 + a6 s^6 + ...
-                %       dz(s) = 2*a2 + 4*a4*s^2 + 6*a6*s^4
-                %this would be a good place for Zernike perturbations
+                %    dz/ds(s) = 2*a2 + 4*a4*s^2 + 6*a6*s^4
                 f = 2;
-                dz = 0;
+                dz = zeros(nRays,1); 
+                radialDerivative = zeros(nRays,1); 
                 for a = surface.asphere
                   radialDerivative = radialDerivative + f * a * sn;
                   sn = sn .* s2;
@@ -212,6 +231,10 @@ else %not simple: distorted flat, or a conic
                   f = f + 2;
                 end
 
+                % this would be a good place for Zernike perturbations
+                
+
+                 
                 % Nearest point on the asphere to the last estimate
                 Pnear = tangentProjection + bsxfun(@times,(dz+z),Nv);
                 % update the normal vector. There is a 
@@ -249,6 +272,8 @@ else %not simple: distorted flat, or a conic
                 end
             end
 
+            % projection and tangentProjection are separate to make
+            % it easier to validate while debugging
             projection = tangentProjection;
             % Now project the original ray onto that plane and measure
             % the distance from the intersection point to Pnew
@@ -274,20 +299,22 @@ else %not simple: distorted flat, or a conic
     N = normr(N);
 end
 
-% pixels
+%% Map onto pixels
 if isfield(surface,'pixelSize')
     % [x1 x2 x2 ... ; y1 y2 y3 ...]
     rays.pixels = round(fix(2*(surface.local * projection')/surface.pixelSize)/2)';
+    rays.pixelSize = surface.pixelSize;
 end
 
-% Aperture test, in tangent plane space. Not optimized for
+%% Aperture test, in tangent plane space. Not optimized for
 % computational efficiency because there are some extra
 % translations into and out of the local coordinate frame
 if optAperture && isfield(surface,'aperture') && ~isempty(surface.aperture)        
     % the segment center is defined to 
     if isstruct(surface.aperture)
         if strcmp(surface.aperture.type,'pie')
-            uv = bsxfun(@minus,projection * surface.local',surface.aperture.origin(1:2)); 
+            uv = bsxfun(@minus,projection * surface.local',surface.aperture.origin(1:2));
+            % [N x 3] * [3 x 2] - [1 x 2]
             % pie slice is with respect to a center and 
             r2 = sum(uv.^2,2); % circular aperture; use winding order, same side of origin
             % winding order is u*y - v*x. [y1 y2; -x1 -x2] = [0 1;-1 0] * [x1 x1; y2 y2]' 
@@ -353,7 +380,7 @@ noRSI = oldValid & ~RSI;
 rays.status(noRSI) = -1; % No RSI
 valid = valid & RSI;
 
-% Neg. Ray Length
+%% Neg. Ray test
 % At this point, valid = oldValid & RSI 
 negRays = (L<0);    
 rays.status(valid & negRays) = -2; % Negative ray
@@ -361,91 +388,168 @@ if ~optNegRays
     valid = valid & ~negRays;
 end
 
+%% Found the RSI! Now what? Update the path length
 position = newPosition;
-distance = n2 * L;
+distance = n2 .* L;
 %     opl = opl + distance;
 
+%% Reflect or refract?
 surfType = 0; % stop or reference
 if isfield(surface,'type') 
     surfType = surface.type;
+    if strcmp(surfType,'reflect')
+        surfType = 1;
+    elseif strcmp(surfType,'refract')
+        surfType = 2;
+    end
 end
-%reflect or refract? Note N is normalized
-switch surfType
-    case 1 %reflect
-        if isFlat && ~isNotSimple
-            direction = bsxfun(@minus,direction,2*(N*direction')'*N);
-        else % dot product = sum(N.*direction,2)
-            delta = 2*bsxfun(@times,N,sum(N.*direction,2));
-            direction = bsxfun(@minus,direction,delta);
-        end        
-    case 2 %refract
-        ne2 = surface.n*surface.n;
-        np=sum(bsxfun(@times,N,direction),2);
-        surface = sign(np);
-        surface(surface==0) = 1;
-        TIR = ne2 - n2 + np.^2;
 
-        %error detection
-        errTIR = TIR<0;
-        lost = valid;
-        lost(valid) = errTIR;
-        rays.status(lost) = -1;
-        valid(lost) = false;
-
-        t = bsxfun(@times,N,np-surface.*sqrt(TIR));
-        direction(valid,:) = direction(valid,:) - t(valid,:);
-
-        % new surface
-        rays.n2 = ne2;
-%         rays.n = surface.n;
-
-    case 4 %polarization: reflect and possibly refract
-        % make a new polarizationReflection() function
-        if isfield(rays,'local') %project the TE vector onto the reflection plane
-            TE = rays.local;
-        else
-            TE = bsxfun(@cross,dirnorm,N);
+if surfType == 2 %maybe it changes?
+    if isfield(surface,'material') 
+        if ~isfield(rays,'wavelength')
+            error('entering a dispersive medium. rays.wavelength must be defined');
         end
-        dirnorm = direction / n;
-        s = bsxfun(@cross,dirnorm,N); %ray direction before reflection [N x 3]
-        s = normr(s); % problem at normal incidence
-        cosphi = sum(s.*rays.local,2)/n; % dot product, scaled down by the incident ray 
-        c2phi = 2 * cosphi.^2 - 1;
-        %could be a sign error here -- have to check that with examples
-        sinphi =sum(bsxfun(@cross,rays.local,s).*direction,2);
-        s2phi = 2*cosphi.*sinphi;
-%             rotationMatrix = [1 0 0 0; 0 c2phi s2phi 0; 0 -s2phi c2phi 0; 0 0 0 1];
-        if isfield(rays,'polarization')
-            if isfield(surface,'NK')
-                n1cosincidence = bsxfun(@dot,newDirection,N)/n;
-                [rp, rs, m11, m12, m33, m34] =  fresnel(n1cosincidence,n,surface.NK);
-            else % perfect reflector
-                m11 = 1; m12 = 0; m33 = -1; m34 = 0;
+        if ~isfield(rays,'units')
+            error('please define units for the wavelength, such as rays.units = ''mm''');
+        end
+        ne2 = surface.material.evaluate(surface.material, rays.wavelength, rays.units);
+    elseif isfield(surface,'n') 
+        ne2 = surface.n*surface.n; 
+    else
+        error('refractive surfaces must have an index of refraction');
+    end
+    rays.n2 = ne2;
+else
+    ne2 = n2; % no change, but maybe the reflection grating needs it 
+end
+
+if isfield(surface,'grating')
+    if ~isfield(rays,'wavelength')
+        error('must set rays.wavelength for gratings to work');
+    end
+    % for a grating defined by a planar surface, surface.grating is a 
+    % vector of length (order / spacing), pointing in
+    % the direction of the parallel planes. 
+    % If you can define the grating vector r3 as a function of position on
+    % the tangent plane, then you can define an arbitrary hologram.
+    % See C J Mitchell 1981 J. Opt. 12 301 
+    % "Generalized ray-tracing for diffraction gratings of arbitrary form"
+    % variable names changed
+    % N          n0       [Nx3] surface-normal (length 1)
+    % direction  mu1*n1   [Nx3] ray vector (length index-of-refraction)
+    % grating    m*n3/g   [1x3] order * grating vector / grating period
+    % r2         mu2*n2   [Nx3] output ray vector (length index of the next medium)
+    % C          m*lambda/g     order * wavelength / grating period
+    lambda = rays.wavelength;
+    grating = surface.grating;
+    if isfield(surface,'order'), grating = grating * surface.order; end
+    
+%     mu2 = 1;
+%     if isfield(surface,'n'), mu2 = surface.n; end
+    
+    % note: dot(N,direction) is sum(N.*direction,2)
+    n0r1 = sum(N.*direction,2);
+    r3 = lambda.*grating;
+    n0r3 = sum(N.*r3,2);
+    r1r3 = sum(direction.*r3,2); % each ray could have a different wavelength
+    r3r3 = sum(r3.*r3,2); % order*lambda/pitch
+    
+    sgn = sign(n0r1); %refract
+%     if isfield(surface,'n') 
+%         ne2 = surface.n*surface.n;
+%     elseif surfType == 1 %reflect
+%         ne2 = n2;
+%     else
+%         error('refractive gratings must have surface.n = index of refraction'); 
+%     end
+
+    if surfType == 1, sgn=-sgn; end %reflect;
+
+    TIR = (n0r1-n0r3).^2 + ne2 - n2 -r3r3 - 2*r1r3;
+    direction = direction - r3 + N.*(sgn.*sqrt(TIR) - n0r1 - n0r3);
+    
+    %whew!
+    
+    
+else %reflect or refract? Note N, the local surface normal, has length 1
+    switch surfType
+        case 1 %reflect
+            if isFlat && ~isNotSimple
+                direction = bsxfun(@minus,direction,2*(N*direction')'*N);
+            else % dot product = sum(N.*direction,2)
+                delta = 2*bsxfun(@times,N,sum(N.*direction,2));
+                direction = bsxfun(@minus,direction,delta);
+            end        
+        case 2 %refract
+            np=sum(bsxfun(@times,N,direction),2);
+            sgn = sign(np);
+            sgn(sgn==0) = 1;
+            TIR = np.^2 + ne2 - n2;
+
+            %error detection
+            errTIR = TIR<0;
+%             lost = valid;
+%             lost(valid) = errTIR;
+            rays.status(errTIR) = -1;
+            valid(errTIR) = false;
+
+%             t = bsxfun(@times,N,np-surface.*sqrt(TIR));
+            t = N .* (np-sgn.*sqrt(TIR));
+            direction(valid,:) = direction(valid,:) - t(valid,:);
+
+            % new surface
+%             rays.n2 = ne2;
+
+        case 4 %to do: polarization: reflect and possibly refract
+            error('sorry, polarization surfaces are not yet implemented');
+            % make a new polarizationReflection() function
+            if isfield(rays,'local') %project the TE vector onto the reflection plane
+                TE = rays.local;
+            else
+                TE = bsxfun(@cross,dirnorm,N);
             end
-        end 
-        stokes = rays.polarization;%for ease of debugging
-        stokes = muellerRotate(c2phi,s2phi,stokes); 
-        stokes = muellerMul(m11, m12, m33, m34,stokes); 
-        rays.polarization = stokes;
-        rays.local = s; % new TE vector
-        if isfield(rays,'local')
-            xdotN = sum(bsxfun(@times,N,rays.local),2);
-            rays.local = N .*xdotN + bsxfun(@times,rays.local,-1 + xdotN);
-        end
-        if isfield(rays,'phase')
-            rays.phase = -rays.phase;
-        end
-        if isfield(rays,'polarization')
-            %http://people.physics.tamu.edu/mgao/calculator/my.jqplot.fresnel.html
-        end        
-        if isfield(rays,'local')
-            xdotN = sum(bsxfun(@times,N,rays.local),2);
-            rays.local = N .*xdotN + bsxfun(@times,rays.local,-1 + xdotN);
-        end
+            n = sqrt(n2);
+            dirnorm = direction / n;
+            s = bsxfun(@cross,dirnorm,N); %ray direction before reflection [N x 3]
+            s = normr(s); % problem at normal incidence
+            cosphi = sum(s.*rays.local,2)/ n; % dot product, scaled down by the incident ray 
+            c2phi = 2 * cosphi.^2 - 1;
+            %could be a sign error here -- have to check that with examples
+            sinphi =sum(bsxfun(@cross,rays.local,s).*direction,2);
+            s2phi = 2*cosphi.*sinphi;
+    %             rotationMatrix = [1 0 0 0; 0 c2phi s2phi 0; 0 -s2phi c2phi 0; 0 0 0 1];
+            if isfield(rays,'polarization')
+                if isfield(surface,'NK')
+                    n1cosincidence = bsxfun(@dot,newDirection,N)/n;
+                    [rp, rs, m11, m12, m33, m34] =  fresnel(n1cosincidence,n,surface.NK);
+                else % perfect reflector
+                    m11 = 1; m12 = 0; m33 = -1; m34 = 0;
+                end
+            end 
+            stokes = rays.polarization;%for ease of debugging
+            stokes = muellerRotate(c2phi,s2phi,stokes); 
+            stokes = muellerMul(m11, m12, m33, m34,stokes); 
+            rays.polarization = stokes;
+            rays.local = s; % new TE vector
+            if isfield(rays,'local')
+                xdotN = sum(bsxfun(@times,N,rays.local),2);
+                rays.local = N .*xdotN + bsxfun(@times,rays.local,-1 + xdotN);
+            end
+            if isfield(rays,'phase')
+                rays.phase = -rays.phase;
+            end
+            if isfield(rays,'polarization')
+                %http://people.physics.tamu.edu/mgao/calculator/my.jqplot.fresnel.html
+            end        
+            if isfield(rays,'local')
+                xdotN = sum(bsxfun(@times,N,rays.local),2);
+                rays.local = N .*xdotN + bsxfun(@times,rays.local,-1 + xdotN);
+            end
 
-    otherwise % do nothing -- no change to direction
+        otherwise % do nothing -- no change to direction
 
-end    
+    end    
+end
 
 if isfield(surface,'display'), rays.display = surface.display; end    
 if isfield(rays,'opl'), rays.opl = rays.opl + distance; else rays.opl = distance; end

@@ -1,4 +1,4 @@
-% Example 001: point source through a tilted rectangular prism
+% Example 002: column source through a tilted rectangular prism
 
 % [start, finish] = importVV('example_001_VV.txt');
 
@@ -25,7 +25,7 @@ s3.direction=[0,0,1];
 s3.type = 0;
 
 %% trace 1e3 times in 2 seconds
-source = sourcePoint([0,0,0],[0,0,1],[1,0,0],.1,10);
+source = sourceColumn([0,0,0],[0,0,1],[1,0,0],10,10);
 surfaces = {s1, s2, s3};
 
 tic

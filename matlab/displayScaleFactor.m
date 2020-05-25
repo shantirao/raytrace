@@ -1,10 +1,15 @@
 function [scale, units] = displayScaleFactor(rays)
 
+if nargin == 0
+    scale = 1;
+    units = 'mm';
+else
 if iscell(rays)
     rays = rays{1}; 
-end;
+end
 scale = 1;
 units = 'm';
+
 % convert to meters
 if isfield(rays,'units') 
     if strcmp(rays.units,'mm')
@@ -15,6 +20,8 @@ if isfield(rays,'units')
         scale = scale * 1e-9;       
     elseif strcmp(rays.units,'pm')
         scale = scale * 1e-12;
+    elseif strcmp(rays.units,'A')
+        scale = scale * 1e-10;
     end
 end
 
@@ -29,5 +36,8 @@ if isfield(rays,'display')
         scale = scale * 1e9;       
     elseif strcmp(units,'pm')
         scale = scale * 1e12;
+    elseif strcmp(rays.units,'A')
+        scale = scale * 1e12;
     end
+end
 end
