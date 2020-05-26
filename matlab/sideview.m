@@ -1,5 +1,5 @@
 set(gcf,'Units','normal');
-set(gca,'Position',[.05 .05 .9 .9]);
+% set(gca,'Position',[.05 .05 .9 .9]);
 axis equal;
 axis tight;
 view([1,0,0]);

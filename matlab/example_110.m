@@ -39,19 +39,19 @@ tic
 trace = raytrace(source, surfaces);
 toc
 %
-figure(1);clf; subplot(3,1,1);
+clf; 
+subplot(2,2,[1 2]);
 plotSurfaces(trace);
 axis equal; sideview
 hold on;plotRays(trace,'b');hold off;
 
 %% 
-figure(2);
-subplot(1,2,1);
+subplot(2,2,3);
 [wfe,mask] = pupilWFE(trace{end});
 displayPupil(wfe,mask);colorbar
 title(sprintf('RMS wfe %g \\mum',1e3*std(wfe(mask(:)))));
-subplot(1,2,2);
-oversample = 5;
+subplot(2,2,4);
+oversample = 4;
 psf = pupilPSF(wfe,mask,(500:10:600)*1e-6,[],100,20 * oversample,source.samplingDistance,.001/oversample);
 psf = psf ./ max(psf(:));
 imagesc(psf);

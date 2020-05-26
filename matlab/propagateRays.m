@@ -43,7 +43,8 @@ isFlat = ~isfield(surface,'cuy') || abs(surface.cuy) < optPrecision;
 isSphere = ~isFlat && (~isfield(surface,'K') || abs(surface.K) < optPrecision);
 isASphere = isfield(surface,'asphere') ;
 isDistorted = isfield(surface,'deformation');
-isNotSimple = isASphere || isDistorted;
+isZernike = isfield(surface,'zernike');
+isNotSimple = isASphere || isDistorted || isZernike;
 
 % in this branch, N is the surface normal vector. For planes it's a
 % single vector. For curved surfaces, it's Nx3, a 3-vector for each
@@ -94,8 +95,10 @@ else %not simple: distorted flat, or a conic, or an asphere
         Outside = false; 
         Nv = surface.direction;
         sgn = -1;
-        % Outside means the normal vector points to the outside
     else
+        % Outside means find the solution for the outside of the conic surface
+        % using the sign is a terrible signal. Just set a parameter for
+        % that like "isConvex"
         Outside = surface.cuy < 0;
         if isSphere
             K = 0;
@@ -103,9 +106,14 @@ else %not simple: distorted flat, or a conic, or an asphere
             K = surface.K;
         end
         if Outside
-             Nv = -surface.direction;
-             c  = -surface.cuy;
-             sgn = 1;
+            Nv = -surface.direction;
+            c  = -surface.cuy;
+            sgn = 1;
+        elseif isfield(surface,'convex') && surface.confex
+            % surface.direction points the direction of the conic, and the
+            % radius of curvature is positive.
+            sgn = 1;
+            Outside = true;
         else
             Nv = surface.direction;
             c  = surface.cuy;
@@ -194,7 +202,7 @@ else %not simple: distorted flat, or a conic, or an asphere
             % tangentProjection is the projection onto the local
             % coordinate system
             tangentProjection = P - bsxfun(@times,elevation,Nv);
-            s2 = sum(tangentProjection.^2,2);
+            s2 = sum(tangentProjection.^2,2); % dot(projection,projection)
             if j==1
                 z = elevation;
             else % base elevation from tangent plane 
@@ -207,7 +215,7 @@ else %not simple: distorted flat, or a conic, or an asphere
                 P = tangentProjection + z * Nv;
                 cP = c*P; %local curvature vector, handy in calculating a normal
                 N = bsxfun(@times,Nv,(1-K*(Nv*cP')'))-cP;
-                % N is the local surface-normal vector
+                % N is the local surface-normal vector, not unitary
             end            
 
             sn = sgn; %concave or convex? establishes sign of s^n
@@ -217,10 +225,13 @@ else %not simple: distorted flat, or a conic, or an asphere
             % iterative corrections: change Pnear and N
             % the height change is dz. The radial derivative is used to
             % adjust the normal vector
+            
             if isASphere
                 %aspheric component of curvature, for adding to the normal
                 %vector  z(s) = a2 s^2 + a4 s^4 + a6 s^6 + ...
-                %    dz/ds(s) = 2*a2 + 4*a4*s^2 + 6*a6*s^4
+                %    dz/ds(s) = s * (2*a2 + 4*a4*s^2 + 6*a6*s^4)
+                %         (one factor of s missing for now. Save it for 
+                %         later, and it provides direction
                 f = 2;
                 dz = zeros(nRays,1); 
                 radialDerivative = zeros(nRays,1); 
@@ -231,18 +242,45 @@ else %not simple: distorted flat, or a conic, or an asphere
                   f = f + 2;
                 end
 
-                % this would be a good place for Zernike perturbations
-                
-
-                 
                 % Nearest point on the asphere to the last estimate
                 Pnear = tangentProjection + bsxfun(@times,(dz+z),Nv);
-                % update the normal vector. There is a 
+                N = N - bsxfun(@times,(Nv * N')' .* radialDerivative,tangentProjection);
+               % update the normal vector. 
                 % add the radial aspheric component of the derivative to N
                 % scale the aspheric component to match the conic normal magnitude
-                N = N - bsxfun(@times,(Nv * N')' .* radialDerivative,tangentProjection);
+                % This may appear to be bonkers. For a surface defined by
+                % the locus of points P(x,y) = [x, y, z(x,y)], the surface
+                % normal direction is always [dz/dx, dz/dy, 1]. You can
+                % derive it from N = cross(dP/dx, dP/dy). With linear
+                % perturbations, P(x,y) = P_conic(x,y) + P_asphere(x,y) we
+                % get N(x,y) = N_conic(x,y) + N_asphere(x,y). That's why
+                % it's important not to normalize N until all the
+                % perturbations are calculated.
             end
 
+                % this would be a good place for Zernike perturbations
+            if isZernike % sym
+                if isfield(surface,'center')
+                    uv = tangentProjection * surface.local' - surface.center(1:2);     
+                elseif isfield(surface,'local')
+                    uv = tangentProjection * surface.local';
+                else
+                    error('a surface needs a local coordinate system to evaluate Zernike coefficients');
+                end
+                c = surface.zernike;
+                if isnumeric(surface.aperture)
+                    ap = max(surface.aperture); %circle or annulus 
+                else
+                    ap = surface.aperture.radius(end); %new form- structure describes aperture. much better
+                end
+                [dz dxdy] = zernikeXY(c, uv, ap);
+                Pnear = Pnear + dz .* Nv;
+                % surface.local: [2x3]
+                % N: [Nx3]
+                % dxdy: [Nx2}      
+                N = N - dxdy * surface.local;            
+            end
+                 
             if isDistorted
                 % interpolate a triangulated mesh, where Pnear moves
                 % with the interpolated average of the distortion
@@ -265,6 +303,7 @@ else %not simple: distorted flat, or a conic, or an asphere
                     % expressed as a rotation. Use the curl of the
                     % triangular facets to rotate the normal vector
                     % if more than one triangle, take the average curl
+                    % directional derivatives are probably faster but, meh.
 
                     rotvec = mean(surface.deformation.curl(vi,:),1);
                     Q = rotationMatrix(normr(rotvec),norm(rotvec));
@@ -312,12 +351,21 @@ end
 if optAperture && isfield(surface,'aperture') && ~isempty(surface.aperture)        
     % the segment center is defined to 
     if isstruct(surface.aperture)
-        if strcmp(surface.aperture.type,'pie')
-            uv = bsxfun(@minus,projection * surface.local',surface.aperture.origin(1:2));
+         if isfield(surface.aperture,'origin')
+             uv = bsxfun(@minus,projection * surface.local',surface.aperture.origin(1:2));
+         elseif isfield(surface,'center')
+            uv = bsxfun(@minus,projection * surface.local',surface.center(1:2));       
+         elseif isfield(surface,'local')
+            uv = projection * surface.local';
+         else
+            uv = projection;
+         end
+ 
+         if strcmp(surface.aperture.type,'pie') % gap, edges, origin, radius
             % [N x 3] * [3 x 2] - [1 x 2]
             % pie slice is with respect to a center and 
-            r2 = sum(uv.^2,2); % circular aperture; use winding order, same side of origin
             % winding order is u*y - v*x. [y1 y2; -x1 -x2] = [0 1;-1 0] * [x1 x1; y2 y2]' 
+            r2 = sum(uv.^2,2); % circular aperture; use winding order, same side of origin
             edges = normr(surface.aperture.edges)'; %transpose 
             e = [0 1;-1 0]*edges;
             g = [1 0;0 -1]*surface.aperture.gap(:);
@@ -333,7 +381,27 @@ if optAperture && isfield(surface,'aperture') && ~isempty(surface.aperture)
                 uv = bsxfun(@minus,projection * surface.local',surface.center(1:2));       
                 inAP = and(inAP, sum(uv.^2,2) < surface.aperture.parentRadius.^2);
             end
-        else
+        elseif strcmp(surface.aperture.type,'circle')
+            r2 = sum(uv.^2,2); % circular aperture
+            inAP = r2 <= surface.aperture.radius^2;
+        elseif strcmp(surface.aperture.type,'annulus')
+            r2 = sum(uv.^2,2); % circular aperture
+            inAP = surface.aperture.radius(1)^2 <= r2 & r2 <= surface.aperture.radius(2)^2;          
+        elseif strcmp(surface.aperture.type,'rectangle')
+            % surface.aperture.bounds = |u1 u2| 
+            %                           |v1 v2|
+            inAP = surface.aperture.bounds(1) <= uv(:,1) & uv(:,1) <= surface.aperture.bounds(3)& ...
+                surface.aperture(2) <= uv(:,2) & uv(:,2) <= surface.aperture.bounds(4);
+        elseif strcmp(surface.aperture.type,'polygon')
+            x = surface.aperture.bounds(:,1);
+            y = surface.aperture.bounds(:,2);
+            if x(1) ~= x(end) || y(1) ~= y(end) %close the polygon
+                x(end+1)=x(1);
+                y(end+1)=y(1);
+            end
+            [in,on] = inpolygon(uv(:,1),uv(:,2),x,y);
+            inAP = in|on;
+       else
             error(['invalid aperture type ' surface.aperture.type]);
         end
     else % center, local coordinate sys, radius|rectangle|ellipse|polygon

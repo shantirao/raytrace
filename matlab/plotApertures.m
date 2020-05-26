@@ -53,8 +53,31 @@ else
                 xy = [xy;ap.radius(1)*e(1,:)];
                 x = xy(:,1) + offset(1);
                 y = xy(:,2) + offset(2);
-            end                    
-        else
+            elseif strcmp(ap.type,'circle')
+                th = 0:pi/50:2*pi;
+                x(:,j) = ap.radius * cos(th');
+                y(:,j) = ap.radius * sin(th') ;
+            elseif strcmp(ap.type,'annulus')
+                th = 0:pi/50:2*pi;
+                for j=1:numel(ap.radius)
+                    x(:,j) = ap.radius(j) * cos(th');
+                    y(:,j) = ap.radius(j) * sin(th') ;
+                end
+            elseif strcmp(ap.type,'rectangle')
+                x1 = ap.bounds(1,1);
+                x2 = ap.bounds(2,1);
+                y1 = ap.bounds(1,2);
+                y2 = ap.bounds(2,2);
+                x = [x1 x1 x2 x2 x1]';
+                y = [y1 y2 y2 y1 y1]';
+            elseif strcmp(ap.type,'polygon')
+                x = ap.bounds(:,1);
+                y = ap.bounds(:,2);
+                if x(1) ~= x(end) || y(1) ~= y(end) %close the polygon
+                    x(end+1)=x(1);
+                    y(end+1)=y(1);
+                end
+            else %legacy hack
             M = numel(ap);
             scale = max(max(ap(:)),max(ap(:))-min(ap(:)))/4;
             if M == 4 % rectangle

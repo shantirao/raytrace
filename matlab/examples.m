@@ -33,3 +33,9 @@ example_200
 figure(8)
 disp('asphere')
 example_303
+
+
+%zernike deformation - iterative solution
+figure(9)
+disp('asphere')
+example_401
