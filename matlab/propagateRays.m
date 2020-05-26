@@ -7,6 +7,7 @@ optSegments = true;
 optParallel = false;
 optPrecision = 1e-14;
 optDebug = false;
+optFlatDeformations = false;
 
 if nargin > 2
     if isfield(options,'aperture'), optAperture = options.aperture; end
@@ -15,6 +16,7 @@ if nargin > 2
     if isfield(options,'parallel'), optParallel = options.parallel; end
     if isfield(options,'precision'), optPrecision = options.precision; end
     if isfield(options,'debug'), optDebug = options.debug; end
+    if isfield(options,'flatDeformation'), optFlatDeformations = options.flatDeformation; end
 end
 
 maxIterations = 10;
@@ -257,9 +259,9 @@ else %not simple: distorted flat, or a conic, or an asphere
                 % it's important not to normalize N until all the
                 % perturbations are calculated.
             end
-
-                % this would be a good place for Zernike perturbations
-            if isZernike % sym
+            
+            % deformations relative to the aperture, not the parent surface
+            if isZernike || isDistorted
                 if isfield(surface,'center')
                     uv = tangentProjection * surface.local' - surface.center(1:2);     
                 elseif isfield(surface,'local')
@@ -267,7 +269,9 @@ else %not simple: distorted flat, or a conic, or an asphere
                 else
                     error('a surface needs a local coordinate system to evaluate Zernike coefficients');
                 end
-                c = surface.zernike;
+ 
+            if isZernike % sym
+               c = surface.zernike;
                 if isnumeric(surface.aperture)
                     ap = max(surface.aperture); %circle or annulus 
                 else
@@ -287,30 +291,58 @@ else %not simple: distorted flat, or a conic, or an asphere
                 % points, and N moves with the interpolated difference
 
                 % vertex indices and barycenters, in local coordinates
-                tangentLocals = tangentProjection * surface.local';
+%              uv =    tangentLocals = tangentProjection * surface.local';
 
                 % have to iterate over the mesh because a point can be
                 % in more than one triangle if it's at a vertex
                 for i=1:size(N,1)
-                    [vi,bc] = pointLocation(surface.deformation.triangulation,tangentLocals(i,:));
-                    triVals = surface.deformation.displacement(surface.deformation.triangulation(vi,:),:);
-                    dP = bc * triVals; %(bc',triVals')';
-                    dP = mean(dP,1); %multiple triangles get averaged
+                    [triangle,barycenter] = pointLocation(surface.deformation.triangulation,uv(i,:));
+                    triVals = surface.deformation.displacement(surface.deformation.triangulation(triangle,:),:);
+                    dP = barycenter * triVals; %(bc',triVals')';
+                    % dP = mean(dP,1); %multiple triangles get averaged
                     % translates the surface intersection point. 
-                    Pnear(i,:) = Pnear(i,:) + dP;
+                    % pointLocation used to return more than one triangle
 
-                    % the surface normal moves a bit, too. It can be
+                    % if deformations are surface-normal, instead of
+                    % tangent-normal, you would do dP * normr(N) here
+                    Pnear(i,:) = Pnear(i,:) + dP * Nv;
+
+                    % old: the surface normal moves a bit, too. It can be
                     % expressed as a rotation. Use the curl of the
                     % triangular facets to rotate the normal vector
-                    % if more than one triangle, take the average curl
-                    % directional derivatives are probably faster but, meh.
+%                     rotvec = mean(surface.deformation.curl(vi,:),1);
+%                     Q = rotationMatrix(normr(rotvec),norm(rotvec));
+%                     N(i,:) = Q * N(i,:)';
 
-                    rotvec = mean(surface.deformation.curl(vi,:),1);
-                    Q = rotationMatrix(normr(rotvec),norm(rotvec));
-                    N(i,:) = Q * N(i,:)';
+                if ~optFlatDeformations % change WFE without steering the beams
+                    % use flatDeformations = true if tangent-normal
+                    % deformations are small, and not gridded finely enough
+                    % not gridded finely enough to 
+                 
+% there's a pathology that if a point falls on an edge or vertex, the path length is
+% correct, but the tilt comes from only one of the triangles associated
+% with that vertex. If any of the baycenters are less than a precision
+% threshold, average the tilts from the adjacent triangles as well.
+                    notIt = barycenter < optPrecision;
+                    s = sum(notIt);
+                    if s == 2 %vertex - single
+                        vertex = surface.deformation.triangulation.ConnectivityList(triangle,~notIt);
+                        dxdy = surface.deformation.vertexSlope(vertex,:);
+                    elseif s == 1 %edge - 2 vertices are close
+                        vertex = surface.deformation.triangulation.ConnectivityList(triangle,~notIt);
+                        edges = all(surface.deformation.edges == sort(vertex),2);
+                        %weighted average of vertices? No, better to use
+                        %the average of the adjacent triangles
+                        %dxdy = sum(surface.deformation.edgeSlope(vertex,:).*barycenter(~notIt),1); 
+                        dxdy = surface.deformation.edgeSlope(edges,:);
+                    else % look up the slope for that particular vertex
+                        dxdy = surface.deformation.slope(triangle,:);
+                    end
+                    N(i,:) = N(i,:) - dxdy * surface.local;
+                end
                 end
             end
-
+            end
             % projection and tangentProjection are separate to make
             % it easier to validate while debugging
             projection = tangentProjection;
@@ -391,7 +423,7 @@ if optAperture && isfield(surface,'aperture') && ~isempty(surface.aperture)
             % surface.aperture.bounds = |u1 u2| 
             %                           |v1 v2|
             inAP = surface.aperture.bounds(1) <= uv(:,1) & uv(:,1) <= surface.aperture.bounds(3)& ...
-                surface.aperture(2) <= uv(:,2) & uv(:,2) <= surface.aperture.bounds(4);
+                surface.aperture.bounds(2) <= uv(:,2) & uv(:,2) <= surface.aperture.bounds(4);
         elseif strcmp(surface.aperture.type,'polygon')
             x = surface.aperture.bounds(:,1);
             y = surface.aperture.bounds(:,2);

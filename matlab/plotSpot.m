@@ -17,7 +17,7 @@ if isfield(rays,'surface') && isfield(rays.surface,'local')
     end
 elseif isfield(rays,'local')
     axes = rays.local;
-    origin = rays.position;
+    origin = [0 0 0];
 else
     axes = [1 0 0;0 1 0];
     origin = [0 0 0];
