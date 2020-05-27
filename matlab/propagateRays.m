@@ -367,7 +367,8 @@ else %not simple: distorted flat, or a conic, or an asphere
         projection = P - bsxfun(@times,elevation,Nv);
     end
 
-    N = normr(N);
+    N = N./sqrt(sum(N.^2,2));
+%     N = normr(N);
 end
 
 %% Map onto pixels
