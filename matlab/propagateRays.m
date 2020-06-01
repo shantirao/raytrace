@@ -111,11 +111,13 @@ else %not simple: distorted flat, or a conic, or an asphere
             Nv = -surface.direction;
             c  = -surface.cuy;
             sgn = 1;
-        elseif isfield(surface,'convex') && surface.confex
+        elseif isfield(surface,'convex') && surface.convex
             % surface.direction points the direction of the conic, and the
             % radius of curvature is positive.
-            sgn = 1;
             Outside = true;
+            Nv = surface.direction;
+            c  = surface.cuy;
+            sgn = 1;
         else
             Nv = surface.direction;
             c  = surface.cuy;
