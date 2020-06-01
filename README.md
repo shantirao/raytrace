@@ -47,7 +47,7 @@ There are also some handy functions for displaying what happens. Let's plot the 
     subplot(1,3,2); plotSpot(trace{end});axis image;
     subplot(1,3,3); 
     psf = pupilPSF(pupil, mask, .000633, 1, 1/2/m1.cuy, 19, source.samplingDistance, .010);
-    imagesc(psf); axis image;
+    imagesc(psf); colorbar; axis image;
 
 ![Ray side view 1](/tutorial/matlabtutorial1.png)
 
