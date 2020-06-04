@@ -5,8 +5,6 @@ Start with "examples.m" and read the instructions in "raytrace.m".
 
 To see how one might instantiate a giant segmented telescope, and compute the effect on the pupil-referred wavefront if any of the optical elements were to move a microradian or micrometer in any direction, run "exampleHabEx.m".
 
-The [MATLAB](matlab/) code was originally developed at JPL, and is released as open-source under an [Apache 2.0 license](LICENSE). US Government sponsorship is acknowledged.
-
 ## Tutorial
 You will create an object for a ray bundle, calculate how they are affected by a sequence of surface interfaces. The ray propagation equations are coordinate-free, which means that every position and direction needs to be expressed in 3D.
 
@@ -75,6 +73,22 @@ Raytrace the same source through the perturbed mirror, and what happens? There's
     trace = raytrace(source,{perturb(m1,pert),fp});
 
 ![Ray side view 1](/tutorial/matlabtutorial6.png)
+
+## What's it good for?
+
+Shanti's Raytracer is for calculating how an optical wavefront distorts and changes direction as it travels through an optical system. This is dominated by path length changes, but the angular deformation of surfaces also matter, and these algorithms compute that, too. It includes a number of algorithms for defining apertures and perturbations.
+
+It is not a lens design system, but you could certainly use this to optimize for some performance metric. See [findFocus.m](matlab/findFocus.m) for an example
+
+## What it's not good for?
+
+It doesn't propagate the principal curvature (yet) or keep track of polarization effects (yet).
+
+The point-spread function calculation isn't particularly sophisticated. For that, you'd want [poppy](https://poppy-optics.readthedocs.io/en/stable/) or [PROPER](http://proper-library.sourceforge.net/). If you want to attempt to improve on those, you'd first solve the curvature and polarization, so that you could compute the vector field propagation between planes.
+
+## About
+
+The [MATLAB](matlab/) code was originally created by <a href=http://shantirao.com/>Shanti Rao</a> at <a href=http://jpl.nasa.gov>JPL</a>, and is released as open-source under an [Apache 2.0 license](LICENSE). US Government sponsorship is acknowledged. THe code base draws on insights that Bill Breckinridge at JPL used to write MACOS, JPL's original raytracing algorithm in FORTRAN. Thanks to Norbert Sigrist and David Redding for their encouragement.
 
 ## References
 
