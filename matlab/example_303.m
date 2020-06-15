@@ -7,7 +7,7 @@
 s1=struct();
 s1.position = [0,0,10.427852];
 s1.direction=[0,0,-1];
-s1.cuy = -1/50;
+s1.curvature = -1/50; % negative means convex, or use the outside of the surface
 s1.K = -2.30591024;
 s1.type = 2; % 0=reference, 1=reflect, 2=refract
 s1.asphere = [1e-8 -2e-13 3e-17 -4e-21];
