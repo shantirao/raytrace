@@ -10,7 +10,7 @@ s1.direction=[0,0,1]; % points in the direction of curvature, and set convex=tru
                       % (compatible with Zemax)
                       % or, points the other way, and set cuy = -1/50
                       % (compatible with MACOS)
-s1.cuy = 1/50;
+s1.curvature = 1/50;
 s1.convex = true;
 s1.type = 2; % 0=reference, 1=reflect, 2=refract
 s1.n = 1.518522387620793;
@@ -20,7 +20,7 @@ s1.n = 1.518522387620793;
 s2=struct();
 s2.position = [0, 0, 50];
 s2.direction=-s1.direction;
-s2.cuy = +1/50;
+s2.curvature = +1/50;
 s2.type = 2;
 s2.n = 1;
 
