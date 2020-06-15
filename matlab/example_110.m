@@ -7,7 +7,7 @@
 s1=struct();
 s1.position = [0,0,10.427852];
 s1.direction=normr([0.001,0,-1]);
-s1.cuy = -1/50;  % 1 / radius of curvature
+s1.curvature = -1/50;  % 1 / radius of curvature
 s1.type = 'refract';
 s1.n = 1.518522387620793;
 % direction points toward the oncoming rays, and curvature is negative,
