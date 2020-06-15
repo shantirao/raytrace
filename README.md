@@ -17,11 +17,11 @@ Let's decide that _+z_ will be the optical axis, and define a collimated source 
     source = sourceColumn([0, 100, 0],[0, 0, 1],[1, 0 0], 50, 9)
     source.units = 'mm';
 
-Next, place a concave mirror some distance away, pointing in the _-z_ direction. We'll give it a radius of curvature of 500 mm, which means that the curvature, **cuy**, is 1/500.
+Next, place a concave mirror some distance away, pointing in the _-z_ direction. We'll give it a radius of curvature of 500. (You could also write **m1.curvature = 1/500**.)
 
     m1.position = [0 0 50];
     m1.direction = [0 0 -1];
-    m1.cuy = 1/500;
+    m1.radius = 500;
     m1.type = 'reflect';
     
 We'll put another surface, a focal plane, at prime focus. Let's tell it that we want wavefront errors in nanometers.
