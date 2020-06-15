@@ -41,6 +41,11 @@ oldValid = valid;
 
 % calculate ray lengths L, error, new positions, surface normals N
 % isDistorted = isfield(surface,'zernike') || isfield(surface,'grid') || isfield(surface,'mesh');
+if isfield(surface,'curvature') && ~isfield(surface,'cuy')
+    surface.cuy = surface.curvature;
+elseif isfield(surface,'radius') && ~isfield(surface,'cuy') && surface.radius ~= 0
+    surface.cuy = 1/surface.radius;
+end
 isFlat = ~isfield(surface,'cuy') || abs(surface.cuy) < optPrecision;
 isSphere = ~isFlat && (~isfield(surface,'K') || abs(surface.K) < optPrecision);
 isASphere = isfield(surface,'asphere') ;
