@@ -7,7 +7,7 @@
 s1=struct();
 s1.position = [0,0,10.427852];
 s1.direction=[0,0,-1];
-s1.curvature = 1/50;
+s1.curvature = -1/50;
 s1.convex = true;
 s1.K = -2.30591024;
 s1.type = 'refract';
