@@ -4,22 +4,22 @@ function plotSurfaces(trace)
 xlabel('x');ylabel('y');zlabel('z');
 
 if ~iscell(trace)
-    trace = {trace};
+    trace = {null,trace};
 end
 
 hold on;
 for i=2:numel(trace)
     if max(trace{i}.position,[],1) ~= [0,0,0]       
         v = trace{i}.valid;
-        if isfield(trace{i},'surface') && isfield(trace{i},'local')
-            x = trace{i}.position(v,:) * trace{i}.local(1,:)';
-            y = trace{i}.position(v,:) * trace{i}.local(2,:)';
-            z = trace{i}.position(v,:) * trace{i}.surface.direction';
-        else
+%         if isfield(trace{i},'surface') && isfield(trace{i},'local')
+%             x = trace{i}.position(v,:) * trace{i}.local(1,:)';
+%             y = trace{i}.position(v,:) * trace{i}.local(2,:)';
+%             z = trace{i}.position(v,:) * trace{i}.surface.direction';
+%         else
             x = trace{i}.position(v,1);
             y = trace{i}.position(v,2);
             z = trace{i}.position(v,3);
-        end
+%         end
         if ~isempty(x) 
             if isfield(trace{i},'segment')
                 s = trace{i}.segment(v);
