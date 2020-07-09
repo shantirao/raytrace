@@ -106,7 +106,7 @@ else %not simple: distorted flat, or a conic, or an asphere
         % Outside means find the solution for the outside of the conic surface
         % using the sign is a terrible signal. Just set a parameter for
         % that like "isConvex"
-        Outside = surface.cuy < 0;
+        Outside = surface.cuy < 0; 
         if isSphere
             K = 0;
         else

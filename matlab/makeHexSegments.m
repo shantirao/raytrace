@@ -1,5 +1,7 @@
 function segments = makeHexSegments(parent,center,sizePP,gap,rotation,numRings,style)
+% usage: m1.segments = makeHexSegments(m1,[0,0],500,50,0,2)
 % works for up to 19 hex segments. After that, YMMV
+% size is point-to-point size of the segments
 s0 = struct(); %s0 becomes the prototype
 for f = fieldnames(parent)' %have to use the transpose thingy.
     if ~strcmp(f{1},'segments')

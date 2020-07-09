@@ -14,23 +14,39 @@ for i=2:numel(trace)
         if isfield(trace{i},'surface') && isfield(trace{i},'local')
             x = trace{i}.position(v,:) * trace{i}.local(1,:)';
             y = trace{i}.position(v,:) * trace{i}.local(2,:)';
+            z = trace{i}.position(v,:) * trace{i}.surface.direction';
         else
             x = trace{i}.position(v,1);
             y = trace{i}.position(v,2);
+            z = trace{i}.position(v,3);
         end
         if ~isempty(x) 
-            tri = delaunay(x,y);
-            z = trace{i}.position(v,3);
-    %         v = v(tri(:,1)) & v(tri(:,2)) & v(tri(:,3));
-    %         C = repmat([1 0 0],size(x)); %uint8(v(v));
-            %delete unused areas
-
-            h = trisurf(tri,x,y,z,'EdgeColor','none','FaceVertexCData',[1,0,0]); %,'CDataMapping','direct');
-    %         colormap([1 0 0]);
-            alpha(.5)
+            if isfield(trace{i},'segment')
+                s = trace{i}.segment(v);
+                mn = min(s(:));
+                mx = max(s(:));
+                for j=mn:mx
+                    drawSurface(x,y,z,s(:) == j);
+                end
+            else
+                drawSurface(x,y,z);
+%                 tri = delaunay(x,y);
+%                 h = trisurf(tri,x,y,z,'EdgeColor','none','FaceVertexCData',[1,0,0]); %,'CDataMapping','direct');
+%                 alpha(.5)
+            end
         end
     end
 end
 hold off;
 end
 
+function drawSurface(x,y,z, select)
+    if nargin > 3
+        x=x(select);
+        y=y(select);
+        z=z(select);
+    end
+    tri = delaunay(x,y);
+    h = trisurf(tri,x,y,z,'EdgeColor','none','FaceVertexCData',[1,0,0]); %,'CDataMapping','direct');
+    alpha(.5)
+end

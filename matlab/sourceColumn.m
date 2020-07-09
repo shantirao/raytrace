@@ -39,6 +39,9 @@ if isstruct(position) % surface, Nrays, [RefIndex]
     if isfield(position,'display')
         rays.display = position.display;
     end    
+    if isfield(position,'index')
+        RefIndex = position.index;
+    end
     position = srf.position;
     direction = srf.direction;
     if isfield(srf,'local')

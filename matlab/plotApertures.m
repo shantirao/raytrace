@@ -133,7 +133,7 @@ else
 %             xyz = s.position;
 %         end
 %     end
-    if isfield(s,'reference') %reference axes are in global coordinates
+    if ~isempty(points) && isfield(s,'reference') %reference axes are in global coordinates
         scale = max(range(points{1},1))/5;
         if (is3D)
             u = s.reference;

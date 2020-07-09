@@ -4,7 +4,7 @@ function [ e, normal, xyz ] = elevation( surface, uv )
 % points [Nx2] : defaults to surface.center [0,0]
 % returns heights above tangent plane, normal vectors (in global
 % coordinates) and positions (in global coordinates)
-if ~isfield(surface,'cuy')
+if ~isfield(surface,'cuy') && ~isfield(surface,'curvature') && ~isfield(surface,'radius')
     e = 0;
     normal = surface.direction;
     c = [0,0];
@@ -17,6 +17,13 @@ else
         uv = [0,0];
     end
 
+    if ~isfield(surface,'cuy')
+        if isfield(surface,'curvature')
+            surface.cuy = surface.curvature;
+        elseif isfield(surface,'radius')
+            surface.cuy = 1/surface.radius;
+        end
+    end
     z = abs(1/surface.cuy); %from ROC
     N = size(uv,1);
     c = [0,0];

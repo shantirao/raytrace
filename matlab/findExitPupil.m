@@ -1,4 +1,4 @@
-function [pupil,surfaces] = findExitPupil(surfaces,sourceAperture,display)
+function [pupil,surfaces] = findExitPupil(sourceAperture,surfaces,display)
 %% find an exit pupil that is an optical conjugate of the first mirror
 % inputs: surfaces is a cell array of optical surfaces, sourceAperture is a
 % structure describing the ray origins
@@ -10,7 +10,7 @@ if nargin < 3
 end
 
 %% setup 
-src = sourceColumn(sourceAperture,0,1); % single ray at center of aperture
+src = sourceColumn(sourceAperture,0); % single ray at center of aperture
 options.segments = false;
 options.aperture = false;
 %% find an image by tracing from the source aperture. 

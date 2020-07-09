@@ -36,6 +36,8 @@ function [trace, distance, projection, elevation] = raytrace(rays, surface, opti
 %                          cuy > 0: direction points towards   curved surface
 %                          cuy < 0: direction points away from curved surface
 %                          cuy = 0: Plane
+%       surface.curvature [1x1]: same as cuy
+%       surface.radius [1x1]: alternative to curvature, radius = 1/cuy
 %       surface.K [1x1]: conic constant
 %                          K = 0: for a sphere
 %       surface.center [1x2]: center of aperture on the tangent plane
@@ -56,7 +58,7 @@ function [trace, distance, projection, elevation] = raytrace(rays, surface, opti
 %                                   of rotation
 %       surface.asphere [1xN]: even asphere coefficients a2 s^2 + ...
 %                                  a4 s^4 + a6 s^6 + ...
-%       surface.zernike [1xN]: Zernike coefficients
+%       surface.zernike [1xN]: Zernike coefficients (not implemented)
 %       surface.deformation [struct]:  see deformSurface.m 
 %            deformation.origins [3xN]: mesh points that lie on surface
 %            deformation.displacement[3xN]: vector displacement of each coordinate
@@ -89,6 +91,7 @@ function [trace, distance, projection, elevation] = raytrace(rays, surface, opti
 %        rays.valid [Nx1]: boolean: valid ray or not?
 %        rays.n2: index^2 after last surface
 %        rays.n: index after last surface
+%        rayys.pixels [Nx3]: which pixels the rays land on
 %        rays.cos: rays.direction . surface.N / rays.n;
 %        rays.status: >0: stopped at surface N
 %                      0: invalid
