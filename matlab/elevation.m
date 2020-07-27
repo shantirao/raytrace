@@ -4,6 +4,7 @@ function [ e, normal, xyz ] = elevation( surface, uv )
 % points [Nx2] : defaults to surface.center [0,0]
 % returns heights above tangent plane, normal vectors (in global
 % coordinates) and positions (in global coordinates)
+  
 if ~isfield(surface,'cuy') && ~isfield(surface,'curvature') && ~isfield(surface,'radius')
     e = 0;
     normal = surface.direction;
@@ -11,30 +12,33 @@ if ~isfield(surface,'cuy') && ~isfield(surface,'curvature') && ~isfield(surface,
     if isfield(surface,'center')
         c = c + surface.center(1:2);
     end
-    xyz = bsxfun(@plus,c,uv) * surface.local;
+    xyz = bsxfun(@plus,c,uv)*surfaceLocal(surface);
 else
     if nargin < 2
         uv = [0,0];
     end
 
-    if ~isfield(surface,'cuy')
-        if isfield(surface,'curvature')
-            surface.cuy = surface.curvature;
-        elseif isfield(surface,'radius')
-            surface.cuy = 1/surface.radius;
-        end
+    if isfield(surface,'cuy')
+    	z = abs(1/surface.cuy); %from ROC
+    elseif isfield(surface,'curvature')
+        z = 1/surface.curvature;
+    elseif isfield(surface,'radius')
+        z = surface.radius;
     end
-    z = abs(1/surface.cuy); %from ROC
+    if isfield(surface,'convex') && surface.convex
+        dir = -surface.direction;
+    else
+        dir = surface.direction;
+    end
     N = size(uv,1);
     c = [0,0];
     if isfield(surface,'center')
         c = c + surface.center(1:2);
     end
 
-    x = bsxfun(@plus,c,uv) * surface.local;
-
-    rays.position = bsxfun(@plus,surface.position+z*surface.direction,x);
-    rays.direction = repmat(-surface.direction,N,1);
+    x = bsxfun(@plus,c,uv)*surfaceLocal(surface);
+    rays.position = bsxfun(@plus,surface.position+z*dir,x);
+    rays.direction = repmat(-dir,N,1);
 
     % flip the surface around so that we can trace from the tangent plane.
     % remember to flip the Z of the normal vector for this to make sense.
