@@ -1,6 +1,6 @@
 function local = surfaceLocal(s)
     if isstruct(s)
-        if isfield(s,'local') && numel(s,'local') >= 6
+        if isfield(s,'local') && numel(s.local) >= 6
             local = s.local;
         else
             local = doSurfaceLocal(s.direction);
