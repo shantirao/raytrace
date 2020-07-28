@@ -26,9 +26,13 @@ else
 end
 
 if nargin > 3
-   rmswfe = displayPupil(pupil,mask,rays,clim);
+   [rmswfe,units] = displayPupil(pupil,mask,rays,clim);
 else
-   rmswfe = displayPupil(pupil,mask,rays);
+   [rmswfe,units] = displayPupil(pupil,mask,rays);
+end
+
+if ~isempty(caption)
+    title(sprintf('%s %5.5g %s rms',caption,rmswfe,units));
 end
 % title(sprintf('%s%5.5g %s rms',caption,scale*rmswfe,units));
 

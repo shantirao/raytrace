@@ -1,4 +1,4 @@
-function [pupil,surfaces] = findExitPupil(sourceAperture,surfaces,display)
+function [pupil,newsurfaces] = findExitPupil(sourceAperture,surfaces,display)
 %% find an exit pupil that is an optical conjugate of the first mirror
 % inputs: surfaces is a cell array of optical surfaces, sourceAperture is a
 % structure describing the ray origins
@@ -15,7 +15,7 @@ options.segments = false;
 options.aperture = false;
 %% find an image by tracing from the source aperture. 
 
-scale = src.aperture/100;
+% scale = src.aperture/100;
 
 %% find a pupil
 % look for the optical conjugate of the first surface before the last image
@@ -24,7 +24,6 @@ scale = src.aperture/100;
 % first, trace the source chief ray to the first surface
 
 r = raytrace(src,surfaces{1},options); %t1{2}; % first surface intersection, instead of ;
-
 
 if display
     if isnumeric(display)
@@ -39,15 +38,14 @@ if display
     axis equal;
 end
 
-% add a differential ray that intersects the curved pupil surface, 1urad
-% offset in angle, and then trace that until the end 
+% add a bundle of rays that intersect the curved pupil surface, 100 urad
+% offset in angle, and then trace those until the end 
 
-rp.N = 2;
-rp.position = repmat(r.position(r.chief,:),2,1);
-rp.direction(1,:) = r.direction(r.chief,:);
-rp.direction(2,:) = (rotationMatrix(r.local(1,:),-1e-4)*r.direction(r.chief,:)')';
-rp.valid = [true;true];
-rp.opl = [0;0];
+pos = r.position(r.chief,:);
+dir = r.direction(r.chief,:);
+local = surfaceLocal(surfaces{1});
+
+rp = sourcePoint(pos, dir, local(1,:), 1e-4, 1, sqrt(r.n2));
 
 % now trace that to the end 
 t2 = raytrace(rp,surfaces(2:end),options);
@@ -57,13 +55,31 @@ if display
     hold on;
     plotRays(t2,'r');
 end
-
+%%
 %pimg is where the chief ray strikes the focus plane
-pimg = r2.position(1,:); 
-% now find where those rays intersect to define the radius of the pupil
-% surface
-[ppupil,d] = lineIntersection(r2.position,r2.direction);
-disp(sprintf('Pupil after surface (%s) at %d %d %d',r2.surface.name,ppupil));
+
+% now trace those rays backwards to find where they intersect
+r3 = r2;
+r3.opl = r3.opl*0;
+r3.direction = -r2.direction;
+
+for pupilIndex = numel(surfaces)-1:-1:2
+    pLast = r3.position(r3.chief,:); 
+    [ppupil,d] = lineIntersection(r3.position,r3.direction); %(1:2,:)
+    if norm(ppupil - pLast) < norm(r3.position(r3.chief,:) - surfaces{pupilIndex}.position) 
+        break % is the intersection between the current surface and the next surface?
+    end
+    r3 = raytrace(r3,surfaces{pupilIndex},options); % go on to the next surface
+end
+
+pupil = struct;
+pupil.name = 'Pupil relay';
+pupil.position = ppupil; % vertex tangent
+
+%%
+
+% [ppupil,d] = lineIntersection(r2.position,r2.direction);
+disp(sprintf('Pupil at %d %d %d at position ',ppupil, pupilIndex+1));
 
 if display
     scatter3(ppupil(1),ppupil(2),ppupil(3),'r');  
@@ -75,29 +91,17 @@ if display
 end
 %% new pupil surface
 
-dV = ppupil - pimg;
-direction = r2.direction(1,:);
-ROC = sqrt(dot(dV,dV));
+ROC = r3.opl(r3.chief) + norm(ppupil - r3.position(r3.chief,:)); %ppupil - pimg;
 
-image = surfaces{end};
-
-pupil = struct;
-pupil.name = 'Pupil relay';
-pupil.position = ppupil; % vertex tangent
-pupil.opdOffset = dot(dV,direction); %negative means virtual
-pupil.cuy = sign(pupil.opdOffset) / ROC; %sqrt(sum((dV).^2)); % positive = concave
-pupil.direction = sign(pupil.opdOffset) * direction; 
+pupil.opdOffset = ROC; %dot(dV,direction); %negative means virtual
+pupil.radius = -ROC; %sqrt(sum((dV).^2)); % positive = concave
+pupil.direction = r3.direction(r3.chief,:); 
+% pupil.convex = true;
 pupil.local = surfaceLocal(pupil);
-pupil.center=[0,0,0];
 pupil.display = 'nm';
 
-if pupil.opdOffset < 0
-    surfaces{end+1} = pupil; 
-    % virtual pupil relay, so do a negative trace after computing the image
-else
-    surfaces{end} = pupil; 
-    % real pupil relay, so stop there
-end
+newsurfaces = { surfaces{1:pupilIndex}, pupil, surfaces{pupilIndex+1:end}};
+
 %%  plot summary
 if display
     source = sourceColumn(sourceAperture,3,1);
@@ -116,11 +120,14 @@ if display
     img =  imagesc(1e6*dp); title(sprintf('Difference: %5.5g nm',1e6*std(dp(mask(:)))));
     set(img,'AlphaData',mask); axis image
  
-    subplot(2,5,8); plotSpot(trace{end-2});  title(trace{end-2}.surface.name);
+    subplot(2,5,8); plotSpot(trace{end-2});  
+    if isfield(surface,'name'),title(trace{end-2}.surface.name); end
     
-    subplot(2,5,9); plotSpot(trace{end-1});  title(trace{end-1}.surface.name);
+    subplot(2,5,9); plotSpot(trace{end-1});  
+    if isfield(surface,'name'), title(trace{end-1}.surface.name); end
     
-    subplot(2,5,10); plotSpot(trace{end});  title(trace{end}.surface.name);
+    subplot(2,5,10); plotSpot(trace{end});  
+    if isfield(surface,'name'),title(trace{end}.surface.name);end
     
     subplot(2,5,[2 7]); plotRays(trace,'b');plotSurfaces(trace);axis image;
     
