@@ -1,4 +1,4 @@
-function [pupil,newsurfaces] = findExitPupil(sourceAperture,surfaces,display)
+function [pupil,newsurfaces,pupilIndex] = findExitPupil(sourceAperture,surfaces,display)
 %% find an exit pupil that is an optical conjugate of the first mirror
 % inputs: surfaces is a cell array of optical surfaces, sourceAperture is a
 % structure describing the ray origins
