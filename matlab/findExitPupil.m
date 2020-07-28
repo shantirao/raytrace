@@ -102,6 +102,7 @@ pupil.display = 'nm';
 
 newsurfaces = { surfaces{1:pupilIndex}, pupil, surfaces{pupilIndex+1:end}};
 
+pupilIndex = pupilIndex+1;
 %%  plot summary
 if display
     source = sourceColumn(sourceAperture,3,1);
