@@ -20,6 +20,16 @@ figure(5)
 disp('point source through a spherical biconvex lens')
 example_101
 
+%spheres - exact solution
+figure(5)
+disp('column source through a spherical biconvex lens')
+example_102
+
+%spheres - exact solution
+figure(5)
+disp('polarization propagation')
+example_103
+
 figure(6)
 disp('ordinary spherical lens, sligntly misaligned')
 example_110
