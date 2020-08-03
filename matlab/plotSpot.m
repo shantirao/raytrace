@@ -2,22 +2,22 @@ function [h,x,y]=plotSpot(rays,varargin)
 %plotSpot(rays,plotoptions) plots spots in tangent plane coordinates
 if iscell(rays)
     [M,N]=size(rays);i=1;
-    for m=1:M, for n=1:N
-        subplot(m,n,i);
+    for i=1:numel(rays)
+        subplot(M,N,i);
         plotSpot(rays{i},varargin{:});
         i=i+1;
-        end, end
+    end
 else
 offset = [0,0];
-if isfield(rays,'surface') && isfield(rays.surface,'local')
-    axes = rays.surface.local;
+if isfield(rays,'surface') %&& isfield(rays.surface,'local')
+    axes = surfaceLocal(rays.surface);
     origin = rays.surface.position;    
     if isfield(rays.surface,'center')
 %         offset = rays.surface.center;
     end
-elseif isfield(rays,'local')
-    axes = rays.local;
-    origin = [0 0 0];
+% elseif isfield(rays,'local')
+%     axes = rays.local;
+%     origin = [0 0 0];
 else
     axes = [1 0 0;0 1 0];
     origin = [0 0 0];

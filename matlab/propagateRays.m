@@ -130,21 +130,26 @@ else %not simple: distorted flat, or a conic, or an asphere
         end            
     end
 
-    P = bsxfun(@minus,position,surface.position);
+%     P = bsxfun(@minus,position,surface.position);
+    P = position - surface.position;
 
     if isSphere % K = 0 simplifies the equations
         Ao = -c*n2;
-        Bo = (direction*Nv') - sum((c*P).*direction,2);
-        Co = c*sum(P.^2,2) - 2*(P * Nv');
+        Bo = (direction*Nv') - c*sum(P.*direction,2);
+        Co = c*sum(P.*P,2) - 2*(P * Nv');
     else % K = anything; reduces to the previous case for K = 0 or a flat for cuy = 0
-        rN   = direction*Nv';
-        cP   = c*P;
-        NcP  = cP*Nv';
-        NcPK = K*NcP;
+        RN   = direction*Nv';  % scalar ray . direction
+        %cP   = c*P;            % vector
+%         cNcP  = cP*Nv';         % scalar
+%         PN   = P*Nv';          % scalar
+%         NcP  = c*(P*Nv'); % scalar - avoid rounding error
+%         KNcP = K*NcP;          % scalar
+        cKPN = c*K*(P*Nv');          % scalar position . opticdirection
 
-        Ao = -c*(n2 + K*rN.^2);
-        Bo = rN - sum(cP.*direction,2) - NcPK.*rN;
-        Co = sum(cP.*P,2) + (P * Nv').*(NcPK-2);
+        Ao = -c*(n2 + K*RN.^2);
+%         Bo = rN - c*sum(P.*direction,2) - cKNP.*rN;
+        Bo = RN .* (1 - cKPN) - c*sum(P.*direction,2);
+        Co = c*sum(P.*P,2) + (P * Nv').*(cKPN-2);
     end
 
     Wo = Bo.^2+Ao.*Co;
@@ -189,13 +194,17 @@ else %not simple: distorted flat, or a conic, or an asphere
 
     newPosition = position + bsxfun(@times,direction,L);
     P = bsxfun(@minus,newPosition,surface.position);
-    cP = c*P;
+%     cP = c*P;
+% c is usually small, so multiplying it by P early removes precision in the
+% ray position. P is multiplied by a unitary vector (Nv), which also can
+% have 1 or 2 elements that are close to zero. Multiplying Nv*P first, 
+% and then scaling by c, preserves more precision.el
     if isFlat && ~isNotSimple % [1x3], same for every ray
         N = Nv;
     elseif isSphere % [M x 3]
-        N = bsxfun(@minus,Nv,cP);
+        N = bsxfun(@minus,Nv,c*P);
     else % [M x 3]
-        N = bsxfun(@times,Nv,(1-K*(Nv*cP')'))-cP;
+        N = bsxfun(@times,Nv,(1-c*K*(Nv*P')'))-c*P;
     end
 
     %asphere terms or deformation; iterative solution for both elevation
@@ -222,8 +231,8 @@ else %not simple: distorted flat, or a conic, or an asphere
                 end
                 % P is the nearest point on the parent conic
                 P = tangentProjection + z * Nv;
-                cP = c*P; %local curvature vector, handy in calculating a normal
-                N = bsxfun(@times,Nv,(1-K*(Nv*cP')'))-cP;
+%                 cP = c*P; %local curvature vector, handy in calculating a normal
+                N = bsxfun(@times,Nv,(1-c*K*(Nv*P')'))-c*P;
                 % N is the local surface-normal vector, not unitary
             end            
 
@@ -324,11 +333,11 @@ else %not simple: distorted flat, or a conic, or an asphere
                 if ~optFlatDeformations % change WFE without steering the beams
                     % use flatDeformations = true if tangent-normal
                     % deformations are small, and not gridded finely enough
-                    % not gridded finely enough to 
+                    % to calculate the beamwalk 
                  
 % there's a pathology that if a point falls on an edge or vertex, the path length is
 % correct, but the tilt comes from only one of the triangles associated
-% with that vertex. If any of the baycenters are less than a precision
+% with that vertex. If any of the barycenters are less than a precision
 % threshold, average the tilts from the adjacent triangles as well.
                     notIt = barycenter < optPrecision;
                     s = sum(notIt);
@@ -659,8 +668,39 @@ else %reflect or refract? Note N, the local surface normal, has length 1
     end    
 end
 
+
 if isfield(surface,'display'), rays.display = surface.display; end    
 if isfield(rays,'opl'), rays.opl = rays.opl + distance; else rays.opl = distance; end
+
+% 
+%todo: transform the coordinate system that the rays drag along with them
+% u = new direction
+% v = original direction
+% If u . v < 1, they're in opposite directions, so need a sign
+if isfield(rays,'local') 
+    local = rays.local';
+    if size(local,2) == 1
+        local = repmat(local,1,nRays);
+    end
+    sOld = 1/sqrt(rays.n2); % need unitary rotatioon matrices, and ray direciton
+    sNew = 1/sqrt(ne2);     % is scaled by the index of refraction
+    sgn = 1;
+    if surfType == 1
+        sOld = -sOld;
+    end
+    for i=1:nRays
+        if valid(i)
+            % direction = r * (old direction)
+            r = rotationBetween(sOld*rays.direction(i,:)',sNew*direction(i,:)');        
+            if surfType == 1  %reflect
+                local(:,i) = -(r*(local(:,i)));
+            else
+                local(:,i) = (r*(local(:,i)));
+            end
+        end
+    end
+    rays.local = local';
+end
 
 rays.position = position;
 rays.direction = direction;
@@ -673,4 +713,18 @@ if optDebug
     rays.projection = projection; %in the global coordinate system, relative to the vertex position
     rays.distance = distance;
     rays.elevation = elevation;
+end
+ 
+
+function R = rotationBetween(u, v)
+% see https://math.stackexchange.com/questions/432057/how-can-i-calculate-a-4-times-4-rotation-matrix-to-match-a-4d-direction-vector/2161406#2161406
+% from https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d/2161631#2161631
+% returns R such that v = R * u, and R * cross(u,v) = cross(u,v)
+% u and v are both column vectors
+    h = v+u;
+    S = eye(3) - 2 * h * (h')/(h'*h);
+    R = S - 2 * v * (v' * S)/(v'*v);
+end
+
+
 end

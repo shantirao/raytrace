@@ -11,14 +11,15 @@ options.segments = false;
 options.aperture = false;
 %% find an image by tracing from the source aperture. 
 
-ri = sourceColumn(src,2);
-ri = struct;
-ri.N = 2;
-ri.direction = repmat(src.direction,2,1);
-ri.position = [src.position;src.position+max(src.aperture/100)*src.local(1,:)]; % 1mm offset
-ri.valid = [true;true];
-ri.opl = [0;0];
-ri.chief =1;
+ri = sourceColumn(src,9);
+% ri = struct;
+% ri.N = 2;
+% ri.direction = repmat(src.direction,2,1);
+% local = surfaceLocal(src);
+% ri.position = [src.position;src.position+max(src.aperture/2)*local(1,:)]; % 1mm offset
+% ri.valid = [true;true];
+% ri.opl = [0;0];
+% ri.chief =1;
 
 r = raytrace(ri,surfaces,options);
 r = r{end};

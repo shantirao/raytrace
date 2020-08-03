@@ -40,13 +40,19 @@ end
 hold off;
 end
 
+function t = isCollinear(x)
+ t = (max(x(:)) - min(x(:)) ) < 1e-14;
+end
+
 function drawSurface(x,y,z, select)
     if nargin > 3
         x=x(select);
         y=y(select);
         z=z(select);
     end
-    tri = delaunay(x,y);
-    h = trisurf(tri,x,y,z,'EdgeColor','none','FaceVertexCData',[1,0,0]); %,'CDataMapping','direct');
-    alpha(.5)
+    if ~isCollinear(x) && ~isCollinear(y)
+        tri = delaunay(x,y);
+        h = trisurf(tri,x,y,z,'EdgeColor','none','FaceVertexCData',[1,0,0]); %,'CDataMapping','direct');
+        alpha(.5)
+    end
 end

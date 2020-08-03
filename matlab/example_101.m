@@ -1,8 +1,8 @@
 % Example 101: point source through a spherical biconvex lens
+% compare to a Zemax model calculated by Norbert Sigrist
+% difference should be < 1e-14 mm in position, < 1e-15 in direction
+% (only 15 digits are provided in the data file)
 
-% [start, finish] = importVV('example_101_VV.txt');
-
-%% setup
 % lens front surface
 s1=struct();
 s1.position = [0,0,40];
@@ -10,40 +10,45 @@ s1.direction=[0,0,1]; % points in the direction of curvature, and set convex=tru
                       % (compatible with Zemax)
                       % or, points the other way, and set cuy = -1/50
                       % (compatible with MACOS)
-s1.curvature = 1/50;
 s1.convex = true;
-s1.type = 2; % 0=reference, 1=reflect, 2=refract
+s1.cuy = 1/50;
+s1.type = 'refract';
 s1.n = 1.518522387620793;
-
 
 % lens back surface -- it's concave, from the ray's point of view
 s2=struct();
 s2.position = [0, 0, 50];
 s2.direction=-s1.direction;
-s2.curvature = +1/50;
-s2.type = 2;
+s2.cuy = 1/50;
+s2.type = 'refract';
 s2.n = 1;
 
 % Stop
-s3=struct();
-s3.position = [0,0,60];
-s3.direction=-s2.direction; % flat doesn't care whether the direction points toward or away from the oncoming rays
-s3.type = 0;
+s4=struct();
+s4.position = [0,0,60];
+s4.direction=[0,0,1];
+s4.type = 0;
 
-%% trace 1e3 times in 2 seconds
-source = sourceColumn([0,0,0],[0,0,1],[1,0,0],10,10);
-surfaces = {s1, s2, s3};
-
-tic
-trace = raytrace(source, surfaces);
-toc
 %%
-clf;
+[start, finish] = importVV('example_101_VV.txt');
+trace = raytrace(start,{s1,s2,s4});
+rays = trace{end};
+
 plotSurfaces(trace);
 axis equal; view(normr([1,0,1]));camroll(-90);
 hold on;plotRays(trace,'b');hold off;
+hold on; plotSurfaces(trace(2:end)); hold off;
 
+disp('mean error')
+mean(abs(rays.position - finish.position),1)
+mean(abs(rays.direction - finish.direction),1)
+disp('range')
+max(abs(rays.position - finish.position),[],1)
+max(abs(rays.direction - finish.direction),[],1)
+disp('std')
+std(rays.position - finish.position,1)
+std(rays.direction - finish.direction,1)
 
-%% compare
-% std(rays.position - finish.position,1)
-% std(rays.direction - finish.direction,1)
+%%
+clf;
+plotSpot(trace);
