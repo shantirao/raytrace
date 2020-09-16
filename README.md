@@ -6,7 +6,7 @@ Start with "examples.m" and read the instructions in "raytrace.m".
 To see how one might instantiate a giant segmented telescope, and compute the effect on the pupil-referred wavefront if any of the optical elements were to move a microradian or micrometer in any direction, run "exampleHabEx.m".
 
 ## Tutorial
-You will create an object for a ray bundle, calculate how they are affected by a sequence of surface interfaces. The ray propagation equations are coordinate-free, which means that every position and direction needs to be expressed in 3D.
+You will create an object for a ray bundle, and calculate how they are affected by a sequence of surface interfaces. The ray propagation equations are coordinate-free, which means that every position and direction needs to be expressed in 3D.
 
 Start with a source ray bundle with one of the built-in functions, **sourceColumn** for collimated beams, **sourcePoint** for spherical wavefronts, and **sourceFan** for a 1-dimensional section of a spherical wavefront.
 
