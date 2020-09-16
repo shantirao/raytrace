@@ -27,14 +27,14 @@ Next, place a concave mirror some distance away, pointing in the _-z_ direction.
 We'll put another surface, a focal plane, at prime focus. Let's tell it that we want wavefront errors in nanometers.
 
     fp.position = [0 0 -450];
-    fp.direction = [0 0 1]; % direction doesn't actually matter for flat surfaces
+    fp.direction = [0 0 1]; % whether it's positive or negative doesn't matter for flat surfaces
     fp.displayUnits = 'nm';
 
 Next, use the **raytrace** function to map the source through the surfaces.
 
     trace = raytrace(source,{m1,fp});
 
-There are also some handy functions for displaying what happens. Let's plot the geometry, which you can spin around in 3D, and then the wavefront error map, a spot diagram, and a point-spread function for a 633 nm light source. This is why we set the **displayUnits** property for the focal plane -- so that wavefront error is printed in nm.
+There are also some handy functions for visualizing the result. Let's plot the geometry, which you can spin around in 3D, and then the wavefront error map, a spot diagram, and a point-spread function for a 633 nm light source. This is why we set the **displayUnits** property for the focal plane -- so that wavefront error is printed in nm.
 
     figure(1);clf;
     plotSurfaces(trace); axis equal; sideview;
@@ -84,7 +84,7 @@ It is not a lens design system, but you could certainly use this to optimize for
 
 It doesn't propagate the principal curvature (yet) or keep track of polarization effects (yet).
 
-The point-spread function calculation isn't particularly sophisticated. For that, you'd want [poppy](https://poppy-optics.readthedocs.io/en/stable/) or [PROPER](http://proper-library.sourceforge.net/). If you want to attempt to improve on those, you'd first solve the curvature and polarization, so that you could compute the vector field propagation between planes.
+The point-spread function calculation isn't particularly sophisticated. For that, you'd want [poppy](https://poppy-optics.readthedocs.io/en/stable/), Andy Kee's [lentil](https://github.com/andykee/lentil), or John Krist's [PROPER](http://proper-library.sourceforge.net/). The built-in PSF calculation looks shockingly similar to the basic one found in **lentil**. If you are inspired to improve on those, assign a TE vector to **rays.local**. This will get transformed for each ray, at every ray-surface intersection, from which you could compute the vector field propagation between planes. 
 
 ## About
 
