@@ -1,6 +1,8 @@
 # raytrace
 Shanti's Raytracer: fast, precise, and accurate optical ray propagation
 
+<img width="147" alt="image" src="https://user-images.githubusercontent.com/6528551/114467881-6dd96080-9b9f-11eb-8b53-0552172be361.png">
+
 Start with "examples.m" and read the instructions in "raytrace.m".
 
 To see how one might instantiate a giant segmented telescope, and compute the effect on the pupil-referred wavefront if any of the optical elements were to move a microradian or micrometer in any direction, run "exampleHabEx.m".
