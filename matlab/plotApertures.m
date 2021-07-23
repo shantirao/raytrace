@@ -28,6 +28,10 @@ else
         style = s.style;
     end
     % calculate edge points x and y relative to the segment center
+    if isfield(s,'diameter') && ~isfield(s,'aperture')
+        s.aperture.type = 'circle';
+        s.aperture.radius = s.diameter / 2;
+    end
     if isfield(s,'aperture')
         ap = s.aperture;
         if isstruct(ap)
@@ -55,8 +59,8 @@ else
                 y = xy(:,2) + offset(2);
             elseif strcmp(ap.type,'circle')
                 th = 0:pi/50:2*pi;
-                x(:,j) = ap.radius * cos(th');
-                y(:,j) = ap.radius * sin(th') ;
+                x = ap.radius * cos(th');
+                y = ap.radius * sin(th') ;
             elseif strcmp(ap.type,'annulus')
                 th = 0:pi/50:2*pi;
                 for j=1:numel(ap.radius)
@@ -156,6 +160,7 @@ else
     end
     hold off;
     if isfield(s,'segments') && numel(s.segments)
+        % todo: map segment local coordinates onto parent local coordinates  
         p=plotApertures(s.segments,varargin{:});
         points = {points{:},p{:}};
     end        

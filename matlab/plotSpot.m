@@ -4,37 +4,42 @@ if iscell(rays)
     [M,N]=size(rays);i=1;
     for i=1:numel(rays)
         subplot(M,N,i);
-        plotSpot(rays{i},varargin{:});
+        r = rays{i};
+        plotSpot(r,varargin{:});
+        if isfield(r,'surface') && isfield(r.surface,'name')
+            title(r.surface.name);
+        end
         i=i+1;
     end
 else
-offset = [0,0];
 if isfield(rays,'surface') %&& isfield(rays.surface,'local')
-    axes = surfaceLocal(rays.surface);
-    origin = rays.surface.position;    
-    if isfield(rays.surface,'center')
-%         offset = rays.surface.center;
-    end
-% elseif isfield(rays,'local')
-%     axes = rays.local;
-%     origin = [0 0 0];
+    xy = surfaceGlobalToLocal(rays.surface,rays.position);
+
+    x = xy(:,1);
+    y = xy(:,2);
+%     axes = surfaceLocal(rays.surface);
+%     origin = rays.surface.position;    
+%     if isfield(rays.surface,'center')
+%     end
 else
+    offset = [0,0];
     axes = [1 0 0;0 1 0];
     origin = [0 0 0];
+    
+    if size(axes,2) == 3
+        ax1 = axes(1,:)';
+        ax2 = axes(2,:)';
+    else
+        ax1 = axes(:,1);
+        ax2 = axes(:,2);
+    end
+
+    pos = bsxfun(@minus,rays.position,origin);
+    x = pos * ax1 - offset(1);
+    y = pos * ax2 - offset(2);
 end
 colors = [];
 
-if size(axes,2) == 3
-    ax1 = axes(1,:)';
-    ax2 = axes(2,:)';
-else
-    ax1 = axes(:,1);
-    ax2 = axes(:,2);
-end
-
-pos = bsxfun(@minus,rays.position,origin);
-x = pos * ax1 - offset(1);
-y = pos * ax2 - offset(2);
 % a = max(std(diff(x(valid))),std(diff(y(valid))));
 a = max(x)-min(x);
 
@@ -58,7 +63,7 @@ if numel(x) > 1024
     n = datasample(1:numel(x), 1024,'Replace',false);
     x = x(n);
     y = y(n);
-    if size(colors,1)>n,     colors = colors(n,:); end
+    if size(colors,1)>numel(n),     colors = colors(n,:); end
 end
 if isempty(colors) || nargin>1
     h=scatter(x,y,'filled',varargin{:}); %a,varargin{:});
@@ -68,6 +73,9 @@ end
 if isfield(rays,'units')
     xlabel(rays.units);
     ylabel(rays.units);
+end
+if isfield(rays,'surface') && isfield(rays.surface, 'aperture')
+    plotApertures(rays.surface);
 end
 axis equal;
 

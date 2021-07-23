@@ -82,6 +82,10 @@ if isFlat && ~isNotSimple % simple plane
    newPosition = position + bsxfun(@times,direction,L);
    elevation = 0;
    projection = bsxfun(@minus,newPosition,surface.position);
+   if isfield(surface,'local')
+      projection = projection * surface.local';
+   end
+
 %        nearestNeighbor
    % dot products are a*b*cos(theta)
    % ray direction vectors are the length of the index of refraction
@@ -381,6 +385,9 @@ else %not simple: distorted flat, or a conic, or an asphere
     else % not an asphere. Really simple.
         elevation = (Nv * P')';
         projection = P - bsxfun(@times,elevation,Nv);
+        if isfield(surface,'local')
+            projection = projection * surface.local';
+        end
     end
 
     N = N./sqrt(sum(N.^2,2));
@@ -390,22 +397,29 @@ end
 %% Map onto pixels
 if isfield(surface,'pixelSize')
     % [x1 x2 x2 ... ; y1 y2 y3 ...]
-    rays.pixels = round(fix(2*(surface.local * projection')/surface.pixelSize)/2)';
+%     rays.pixels = round(fix(2*(surface.local * projection')/surface.pixelSize)/2)';
+    rays.pixels = round(fix(2*(projection)/surface.pixelSize)/2)';
     rays.pixelSize = surface.pixelSize;
 end
 
 %% Aperture test, in tangent plane space. Not optimized for
 % computational efficiency because there are some extra
 % translations into and out of the local coordinate frame
-if optAperture && isfield(surface,'aperture') && ~isempty(surface.aperture)        
+if optAperture && isfield(surface,'aperture') && ~isempty(surface.aperture) ||isfield(surface,'diameter')
+    if isfield(surface,'diameter') && ~isfield(surface,'aperture')
+        surface.aperture = surface.diameter / 2;
+    end
     % the segment center is defined to 
     if isstruct(surface.aperture)
          if isfield(surface.aperture,'origin')
-             uv = bsxfun(@minus,projection * surface.local',surface.aperture.origin(1:2));
+%              uv = bsxfun(@minus,projection * surface.local',surface.aperture.origin(1:2));
+             uv = bsxfun(@minus,projection,surface.aperture.origin(1:2));
          elseif isfield(surface,'center')
-            uv = bsxfun(@minus,projection * surface.local',surface.center(1:2));       
+%             uv = bsxfun(@minus,projection * surface.local',surface.center(1:2));       
+            uv = bsxfun(@minus,projection,surface.center(1:2));       
          elseif isfield(surface,'local')
-            uv = projection * surface.local';
+%             uv = projection * surface.local';
+            uv = projection;
          else
             uv = projection;
          end

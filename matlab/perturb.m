@@ -1,4 +1,4 @@
-function surface = perturb( surface, delta)
+function surface = perturb( surface, delta, inLocalCoordinates)
 %perturb moves a surface location, direction, and local coordinate system.
 %delta can be a structure describing an vector deltas to position, 
 % direction, or {angle, center, and axis}. The surface.transform output is
@@ -15,6 +15,10 @@ function surface = perturb( surface, delta)
 % The local coordinate system (surface.local) and reference axes
 % (surface.reference) are also rotated because they are in the global
 % coordinate system.
+
+if nargin < 3
+    inLocalCoordinates = false;
+end
 
 if iscell(delta)
     for i=1:numel(delta)
@@ -34,11 +38,15 @@ else
     else
         if isnumeric(delta)
             d = delta(1:3); %displacement
-            r = delta(4:6); %rotation
+            if numel(delta) < 6
+                r = [0,0,0];
+            else
+                r = delta(4:6); %rotation
+            end
     %         surface.position = surface.position + d(1:3);
     %         move w.r.t. the surface reference axes
             
-            if isfield(surface,'reference')
+            if inLocalCoordinates && isfield(surface,'reference')
                 Q = rotationMatrix(normr(surface.reference(1,:)),r(1)) * ...
                     rotationMatrix(normr(surface.reference(2,:)),r(2)) * ...
                     rotationMatrix(normr(surface.reference(3,:)),r(3));
@@ -47,11 +55,11 @@ else
                 Q = rotationMatrix([1 0 0],r(1)) * rotationMatrix([0 1 0],r(2)) * rotationMatrix([0 0 1],r(3));
 %                 d = d(4:6);
             end
-    %         surface.direction = (Q * surface.direction')';
-    %         if isfield(surface,'local')
-    %             surface.local = (Q * surface.local')';
-    %         end
         else
+            if inLocalCoordinates
+                error('perturbations in local coordinates only work when the perturbation is a numeric vector');
+            end
+            
             if isfield(delta,'scale')
                 scale = delta.scale;
             else
@@ -78,11 +86,6 @@ else
             else
                 Q = eye(3);
             end
-
-            %rotation about a point. Default is surface position                
-    %         if isfield(surface,'local')
-    %             surface.local = (Q * surface.local')';
-    %         end
 
             %now translate to move the origin
             if isfield(delta,'position') % translation
