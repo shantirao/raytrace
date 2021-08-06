@@ -394,6 +394,11 @@ else %not simple: distorted flat, or a conic, or an asphere
 %     N = normr(N);
 end
 
+%%
+if isfield(surface,'cuy') && surface.cuy < 0
+    elevation = -elevation;
+end
+
 %% Map onto pixels
 if isfield(surface,'pixelSize')
     % [x1 x2 x2 ... ; y1 y2 y3 ...]

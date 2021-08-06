@@ -17,7 +17,7 @@ else
     if nargin < 2
         uv = [0,0];
     end
-
+    
     if isfield(surface,'cuy')
     	z = abs(1/surface.cuy); %from ROC
     elseif isfield(surface,'curvature')
@@ -37,24 +37,24 @@ else
     end
 
     x = bsxfun(@plus,c,uv)*surfaceLocal(surface);
-    rays.position = bsxfun(@plus,surface.position+z*dir,x);
-    rays.direction = repmat(-dir,N,1);
+%     rays.position = bsxfun(@plus,surface.position+z*dir,x);
+    src.position = surface.position + z*dir + x;
+    src.direction = repmat(-dir,N,1);
 
-    % flip the surface around so that we can trace from the tangent plane.
-    % remember to flip the Z of the normal vector for this to make sense.
+    % trace from above the tangent plane
 
-        surface.aperture = [];
-        surface.segments = {};
-        [rays,~,~,e] = raytrace(rays,surface);
+    surface.aperture = [];
+    surface.segments = {};
+    [rays,~,~,e] = propagateRays(src,surface); % raytrace
 
-        if nargout > 1
-            %reverse the normal vector 
-            normal = rays.normal; % - 2*bsxfun(@times,surface.direction,rays.normal*surface.direction');
-        end
-        if nargout > 2
-            xyz = rays.position;
-        end
+    if nargout > 1
+        %reverse the normal vector 
+        normal = rays.normal; % - 2*bsxfun(@times,surface.direction,rays.normal*surface.direction');
     end
+    if nargout > 2
+        xyz = rays.position;
+    end
+end
     
 end
 
