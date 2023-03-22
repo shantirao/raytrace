@@ -1,8 +1,8 @@
 function [location,distance] = lineIntersection(position,direction)
 %% Positions A,B, directions a,b, Solve (A-B + ax - by = 0)
 % distance = [x; y], intersection = A+ax = B+by
-position = gather(position);
-direction = gather(direction);
+%position = gather(position);
+%direction = gather(direction);
 offset = diff(position,1)';
 A = [1 0; 0 -1]* direction;
 distance = linsolve(A',offset);

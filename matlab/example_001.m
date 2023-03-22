@@ -8,7 +8,7 @@ s1=struct();
 s1.position = [0,0,70];
 s1.direction=normr([0,-1,1]);
 s1.type = 2; % 0=reference, 1=reflect, 2=refract
-s1.n = 1.518522387620793;
+s1.index = 1.518522387620793;
 
 
 % BS back surface
@@ -16,7 +16,7 @@ s2=struct();
 s2.position = [0, 0, 80];
 s2.direction=s1.direction;
 s2.type = 2;
-s2.n = 1;
+s2.index = 1;
 
 % Stop
 s3=struct();

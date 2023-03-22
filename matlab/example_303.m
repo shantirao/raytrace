@@ -11,14 +11,14 @@ s1.curvature = -1/50; % negative means convex, or use the outside of the surface
 s1.K = -2.30591024;
 s1.type = 2; % 0=reference, 1=reflect, 2=refract
 s1.asphere = [1e-8 -2e-13 3e-17 -4e-21];
-s1.n = 1.518522387620793; % bk7
+s1.index = 1.518522387620793; % bk7
 
 % lens back surface, flat
 s2=struct();
 s2.position = s1.position + [0,0,10];
 s2.direction=[0,0,-1];
 s2.type = 2;
-s2.n = 1;
+s2.index = 1;
 
 % Stop
 s3=struct();

@@ -11,7 +11,7 @@ s1.curvature = -1/50;
 s1.convex = true;
 s1.K = -2.30591024;
 s1.type = 'refract';
-s1.n = 1.518522387620793;
+s1.index = 1.518522387620793;
 
 
 % lens back surface, flat
@@ -19,14 +19,14 @@ s2=struct();
 s2.position = s1.position + [0,0,10];
 s2.direction=[0,0,-1];
 s2.type = 'refract';
-s2.n = 1;
+s2.index = 1;
 
 % Stop
 s3=struct();
 s3.position = s1.position + [0,0,100];
 s3.direction=[0,0,-1];
 s3.local = [1 0 0;0 1 0]; %coordinate frame of pixels
-s3.pixelSize = 0.01; 
+s3.pixelSize = 0.01;
 
 % trace 1e3 times in 2 seconds
 source = sourceColumn([0,0,0],[0,0,1],[1,0,0],10,40);
@@ -41,7 +41,7 @@ plotSurfaces(trace);
 axis equal; sideview
 hold on;plotRays(trace,'b');hold off;
 
-%% 
+%%
 subplot(2,2,3);
 [wfe,mask] = pupilWFE(trace{end});
 displayPupil(wfe,mask);colorbar

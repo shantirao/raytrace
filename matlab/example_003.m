@@ -15,7 +15,7 @@ s2=struct();
 s2.position = [0,20,20];
 s2.direction=-normr([0,.3,1]);
 s2.type = 'refract';
-s2.n = 1;
+s2.index = 1;
 
 % Stop
 s3=struct();

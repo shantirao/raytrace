@@ -13,7 +13,7 @@ s1.direction=[0,0,1]; % points in the direction of curvature, and set convex=tru
 s1.convex = true;
 s1.cuy = 1/50;
 s1.type = 'refract';
-s1.n = 1.518522387620793;
+s1.index = 1.518522387620793;
 
 % lens back surface -- it's concave, from the ray's point of view
 s2=struct();
@@ -21,7 +21,7 @@ s2.position = [0, 0, 50];
 s2.direction=-s1.direction;
 s2.cuy = 1/50;
 s2.type = 'refract';
-s2.n = 1;
+s2.index = 1;
 
 % Stop
 s4=struct();
