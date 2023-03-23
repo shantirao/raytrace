@@ -113,14 +113,16 @@ else
     % dir = (surface.transform * [X 0]')(1:3)
     % surface.center and segment.aperture are in the local coordinate
     % system so they do not transform.
-    y = (surface.transform * [surface.position 1]');
-    surface.position = y(1:3)';
-    y = (surface.transform * [surface.direction 0]');
-    surface.direction = y(1:3)';
+    o = ones(size(surface.position,1),1);
+    z = zeros(size(surface.direction,1),1);
+    y = (surface.transform * [surface.position o]');
+    surface.position = y(1:3,:)';
+    y = (surface.transform * [surface.direction z]');
+    surface.direction = y(1:3,:)';
     
     % local coordinates
     if isfield(surface,'local')
-        y = (surface.transform* ([surface.local'; 0 0]));
+        y = (surface.transform* ([surface.local'; z']));
         surface.local = y(1:3,:)';
     end
     
