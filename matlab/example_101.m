@@ -34,8 +34,8 @@ s4.type = 0;
 trace = raytrace(start,{s1,s2,s4});
 rays = trace{end};
 
-plotSurfaces(trace);
-axis equal; view(normr([1,0,1]));camroll(-90);
+plotSurfaces(trace);axis equal;
+view(normr([1,0,1]));camroll(-90);
 hold on;plotRays(trace,'b');hold off;
 hold on; plotSurfaces(trace(2:end)); hold off;
 

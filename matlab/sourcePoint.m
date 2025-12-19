@@ -21,7 +21,7 @@ if nargin < 6
     RefIndex = 1;
 end
 if isstruct(position)
-    s = position;  
+    s = position;
     if nargin>2, RefIndex=x; elseif isfield(s,'n'), RefIndex=s.n; end
     if nargin>1, nRays=direction; else nRays = 99; end
     position = s.position;
@@ -34,7 +34,7 @@ if isstruct(position)
     end
     if isfield(s,'display')
         rays.display = s.display;
-    end    
+    end
 end
 
 direction = normr(direction);
@@ -45,7 +45,7 @@ U = NA/RefIndex;
 dU = U*(-nRays:nRays)/nRays;
 
 if U > pi/4
-    error('pointSource only works up to 45บ')
+    error('pointSource only works up to 45ยบ')
 end
 
 [Ux,Uy] = meshgrid(dU,dU);
@@ -57,7 +57,7 @@ N = nnz(include);
 Ux = asin(Ux(include));
 Uy = asin(Uy(include));
 
-rays.chief = ceil((2*nRays+2)*nRays+1);
+rays.chief = ceil(N/2); %ceil((2*nRays+2)*nRays+1);
 rays.position = repmat(position,N,1);
 rays.direction = zeros(N,3);
 rays.n2 = RefIndex^2;
@@ -68,12 +68,12 @@ rays.valid = true(N,1);
 
 z = direction' * RefIndex;
 for i=1:N
-   th = -x*Uy(i) + y*Ux(i); % rotation vector
+   th = x*Uy(i) - y*Ux(i); % rotation vector
    angle = norm(th);
    axis = th/angle;
    rays.direction(i,:) = rotationMatrix(axis,angle) * z;
  %  rays.direction(i,:) = QRotMatrix(th) * z;
 end
-    
+
 end
 

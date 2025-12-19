@@ -1,12 +1,12 @@
-function Geometry = telescopeGeometry(label,prescription,aperture,display)
+function Geometry = telescopeGeometry(label,prescription,aperture,showPlots)
 %% find exit pupil and insert it before or after the focus 1in the prescription
 % the last element of the prescription has to be a focus point.
 % trace to the pupil relay instead of to the image
-[pupilRelay,surfaces] = findExitPupil(prescription,aperture,display);
-options.negative=true;  
+[pupilRelay,surfaces] = findExitPupil(prescription,aperture,showPlots);
+options.negative=true;
 % allow negative tracing from the focus back to a virtual pupil
 
-if display
+if showPlots
     savepng([label ' find pupil relay']);
 end
 
@@ -36,7 +36,7 @@ trace = raytrace(source,{surfaces{1:2}},opt);
 [x,y] = spotPosition(trace{end});
 surfaces{2}.center = [x,y];
 [x,y] = spotExtent(trace{end});
-surfaces{2}.aperture = [max(abs(x)),max(abs(y))]; 
+surfaces{2}.aperture = [max(abs(x)),max(abs(y))];
 %ellipse. Make it off-axis by moving the aperture
 
 %%
@@ -44,8 +44,8 @@ Geometry.m1BeamLaunchers = cellfun(@(s)surfaceLocalToGlobal(s,apertureVertices(s
 Geometry.m2CornerCubes = surfaceLocalToGlobal(surfaces{2},apertureVertices(surfaces{2},12));
 
 %% Display geometry
-if display
-    figure(2); clf; 
+if showPlots
+    figure(2); clf;
     subplot(1,3,1);plotApertures(surfaces{1},true);axis equal;
     title('M1 apertures')
     subplot(1,3,2);plotApertures(surfaces{2},true);axis equal; %segmented m2?

@@ -18,14 +18,14 @@ if isfield(rays,'surface') %&& isfield(rays.surface,'local')
     x = xy(:,1);
     y = xy(:,2);
 %     axes = surfaceLocal(rays.surface);
-%     origin = rays.surface.position;    
+%     origin = rays.surface.position;
 %     if isfield(rays.surface,'center')
 %     end
 else
     offset = [0,0];
     axes = [1 0 0;0 1 0];
     origin = [0 0 0];
-    
+
     if size(axes,2) == 3
         ax1 = axes(1,:)';
         ax2 = axes(2,:)';
@@ -48,9 +48,9 @@ if isfield(rays,'valid')
     x = x(valid);
     y = y(valid);
     if isfield(rays,'segment')
-        segment = rays.segment(valid);        
+        segment = rays.segment(valid);
     end
-else   
+else
     if isfield(rays,'segment')
         segment = rays.segment;
     end
@@ -59,8 +59,8 @@ if isfield(rays,'segment')
     colors = varycolor(1+max(segment(:)));
     colors = colors(segment,:);
 end
-if numel(x) > 1024
-    n = datasample(1:numel(x), 1024,'Replace',false);
+if numel(x) > 2048
+    n = datasample(1:numel(x), 2048,'Replace',false);
     x = x(n);
     y = y(n);
     if size(colors,1)>numel(n),     colors = colors(n,:); end
@@ -69,7 +69,7 @@ if isempty(colors) || nargin>1
     h=scatter(x,y,'filled',varargin{:}); %a,varargin{:});
 else
     h=scatter(x,y,16,colors,'filled'); %a,varargin{:});
-end    
+end
 if isfield(rays,'units')
     xlabel(rays.units);
     ylabel(rays.units);

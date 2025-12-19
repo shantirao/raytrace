@@ -9,7 +9,11 @@ for f = fieldnames(parent)' %have to use the transpose thingy.
     end
 end
 if isfield(parent,'center')
+  if isfield(parent,'local') && numel(parent.center) > 2 % project center point to tangent plane
+    center = (parent.center*parent.local') + center;
+  else
     center = parent.center(1:2) + center;
+  end
 end
 s0.center = center;
 
@@ -22,7 +26,7 @@ if isfield(parent,'name'), name = parent.name; end
 wedge = 2*pi/6;
 
 
-% h is height above 
+% h is height above
 [h, z] = elevation(s0);
 z = -z; %segment Z is away from COC
 s0.center(3) = h;
@@ -46,11 +50,11 @@ if numRings > 1
         z = -z;
         s.center(3) = h;
         s.aperture = makeHexagon(rotation,sizePP/2);
-        s.name = [name '.A' num2str(i)];        
+        s.name = [name '.A' num2str(i)];
         y = normr(surfaceLocalToGlobal(s0,s0.center) - surfaceLocalToGlobal(s,s.center));
         % center is is in local coordinates, reference is is global
         x = normr(cross(y,z));
-        y = normr(cross(z,x)); % make Y be in-plane     
+        y = normr(cross(z,x)); % make Y be in-plane
 %         z = normr(cross(x,y));
         s.reference = [x; y; z];
         segments{end+1} = s;
@@ -69,7 +73,7 @@ if numRings > 2
         s.name = [name '.B' num2str(i)];
         y = normr(surfaceLocalToGlobal(s0,s0.center) - surfaceLocalToGlobal(s,s.center));
         x = normr(cross(y,z));
-        y = normr(cross(z,x));        
+        y = normr(cross(z,x));
         s.reference = [x; y; z];
         segments{end+1} = s;
     end
@@ -84,7 +88,7 @@ if numRings > 2
         s.name = [name '.C' num2str(i)];
         y = normr(surfaceLocalToGlobal(s0,s0.center) - surfaceLocalToGlobal(s,s.center));
         x = normr(cross(y,z));
-        y = normr(cross(z,x));        
+        y = normr(cross(z,x));
         s.reference = [x; y; z];
         segments{end+1} = s;
     end

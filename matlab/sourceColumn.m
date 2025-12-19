@@ -1,5 +1,5 @@
 function [ rays ] = sourceColumn(position, direction, x, radius, Nr, RefIndex)
-%diverging Generates a parallel, cylindrical ray bundle with uniform spacing 
+%diverging Generates a parallel, cylindrical ray bundle with uniform spacing
 % Short syntax: columnSource(surface, Nrays, [RefIndex])
 % surface        optical surface with position, direction, aperture, and local X axis
 % Nr             [1x1] number of rays
@@ -22,13 +22,13 @@ function [ rays ] = sourceColumn(position, direction, x, radius, Nr, RefIndex)
 rays = struct;
 
 if isstruct(position) % surface, Nrays, [RefIndex]
-    srf = position;    
+    srf = position;
     RefIndex = 1;
     if nargin < 2
         Nr = 99;
     else
-        Nr = direction; %num rays        
-        if nargin > 2 
+        Nr = direction; %num rays
+        if nargin > 2
             RefIndex = x;
         end
     end
@@ -38,7 +38,7 @@ if isstruct(position) % surface, Nrays, [RefIndex]
     end
     if isfield(position,'display')
         rays.display = position.display;
-    end    
+    end
     if isfield(position,'index')
         RefIndex = position.index;
     end
@@ -46,8 +46,8 @@ if isstruct(position) % surface, Nrays, [RefIndex]
     direction = srf.direction;
     if isfield(srf,'local')
         x = srf.local(1,:);
-    else
-        x = [1 0 0];
+%    else
+%        x = [1 0 0];
     end
     if isfield(srf,'aperture')
         radius = max(srf.aperture);
@@ -61,10 +61,15 @@ else
 end
 
 direction = normr(direction);
-local = surfaceLocal(direction);
-x = local(1,:);
-y = local(2,:);
-% y = normr(cross(direction,x));
+if nargin < 3 || isempty(x)
+  local = surfaceLocal(direction);
+  x = local(1,:);
+  y = local(2,:);
+else
+  y = normr(cross(direction,x));
+  local = [x;y];
+end
+
 
 if Nr == 0
     rays.chief = 1;
@@ -90,7 +95,7 @@ else
     Ux = Ux(include);
     Uy = Uy(include);
 
-    rays.chief = ceil((2*Nr+2)*Nr+1);
+    rays.chief = ceil(N/2);
 %     rays.opl = zeros(N,1);
     rays.position = bsxfun(@plus,position,Ux*x + Uy*y);
     rays.local = local;

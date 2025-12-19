@@ -16,16 +16,17 @@ else
     ax2 = axes(:,2);
 end
 
-x = cellfun(@(r)r.position * ax1 ,trace,'UniformOutput',false);
+x = cell2mat(cellfun(@(r)r.position * ax1 ,trace,'UniformOutput',false));
 % x = map(@(r)r.position(:,1),raytrace);
-x = horzcat(x{:});
+%x = horzcat(x{:});
 
-y = cellfun(@(r)r.position * ax2,trace,'UniformOutput',false);
-y = horzcat(y{:});
+y = cell2mat(cellfun(@(r)r.position * ax2,trace,'UniformOutput',false));
+%y = horzcat(y{:});
 
-% valid = cellfun(@(r)r.valid,trace,'UniformOutput',false);
-% valid = and(valid{:});
-valid = trace{end}.valid;
+%valid = cell2mat(cellfun(@(r)r.valid,trace,'UniformOutput',false));
+%x(~valid(:)) = NaN;
+%y(~valid(:)) = NaN;
+ valid = trace{end}.valid;
 
 ax3 = cross(ax1,ax2);
 z = trace{end}.position * ax3;
@@ -34,7 +35,8 @@ if sum(z) > 0
     valid = valid & z;
 end
 
-h=plot(x(valid,:),y(valid,:),varargin{:});
+h=plot(x(valid,:)',y(valid,:)',varargin{:});axis equal;
+%h=plot(x',y',varargin{:});axis equal;
 
 end
 

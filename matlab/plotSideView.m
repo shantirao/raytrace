@@ -17,10 +17,10 @@ end
 
 % x = cellfun(@(r)r.position * ax1 ,trace,'UniformOutput',false);
 % x = horzcat(x{:});
-% 
+%
 % y = cellfun(@(r)r.position * ax2,trace,'UniformOutput',false);
 % y = horzcat(y{:});
-% 
+%
 % valid = trace{end}.valid;
 
 x = []; y=[];
@@ -43,7 +43,14 @@ end
 % end
 
 % h=plot(x(valid,:)',y(valid,:)',varargin{:});
-h=plot(x',y',varargin{:});
+N = size(x,1);
+if N > 128
+  downsample = ceil(N / 128);
+  sample=1:downsample:N;
+  h=plot(x(sample,:)',y(sample,:)',varargin{:});
+else
+  h=plot(x',y',varargin{:});
+end
 axis equal;
 end
 

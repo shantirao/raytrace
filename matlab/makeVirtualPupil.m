@@ -1,62 +1,41 @@
-function [pupil,newsurfaces,pupilIndex] = findExitPupil(surfaces,sourceAperture,display)
-%% find an exit pupil that is an optical conjugate of the first mirror
-% inputs: surfaces is a cell array of optical surfaces, sourceAperture is a
+function [pupil,rays] = makeVirtualPupil(surfaces,aperture,rays)
+%% make a spherical exit pupil that is an optical conjugate of the first mirror
+% inputs: surfaces is a cell array of optical surfaces, aperture is a
 % structure describing the ray origins
-% outputs: pupil is the surface, index is where it goes in the surface
-% list, h is a plot handle.
+% outputs: pupil is the surface, which goes after the last
 
-if nargin < 3
-    display = false;
-end
+%% find a pupil
+% rays that meet at a point on the first surface, will also meet at a point somewhere before the focal plane.
+% start with a bundle that originate from a point on surface 1, then trace them to the end
+% then, trace them either forward (real image) or backward (virtual image) to find the point of intersection
+% that distance is the radius of curvature of the
 
 %% setup
-src = sourceColumn(sourceAperture,0); % single ray at center of aperture
+src = sourceColumn(aperture,0); % single ray at center of aperture
 options.segments = false;
 options.aperture = false;
 %% find an image by tracing from the source aperture.
 
 % scale = src.aperture/100;
 
-%% find a pupil
-% look for the optical conjugate of the first surface before the last image
-% plane
 
 % first, trace the source chief ray to the first surface
 
 r = raytrace(src,surfaces{1},options); %t1{2}; % first surface intersection, instead of ;
 
-if display
-    if isnumeric(display)
-        figure(display); clf;
-    elseif ~ishandle(gcf)
-        figure();
-    end
 
-    subplot(2,5,[1,6]);
-    plotRays({src,r},'b');
-    plotApertures(surfaces,true);
-    axis equal;
-end
-
-% add a bundle of rays that intersect the curved pupil surface, 100 urad
-% offset in angle, and then trace those until the end
+% add a bundle of rays that intersect the curved mirror surface, 100 urad
 
 pos = r.position(r.chief,:);
 dir = r.direction(r.chief,:);
 local = surfaceLocal(surfaces{1});
+%angle = atan2(aperture.diameter/2,sqrt(sum((aperture.position - pos).^2,2)));
 
-rp = sourcePoint(pos, dir, local(1,:), 1e-4, 1, sqrt(r.n2));
+rp = sourcePoint(pos, dir, local(1,:), 1e-5, 1, sqrt(r.n2));
 
 % now trace that to the end
 t2 = raytrace(rp,surfaces(2:end),options);
 r2 = t2{end};
-
-if display
-    hold on;
-    plotRays(t2,'r');
-end
-%%
-%pimg is where the chief ray strikes the focus plane
 
 % now trace those rays backwards to find where they intersect
 r3 = r2;
@@ -105,7 +84,7 @@ newsurfaces = { surfaces{1:pupilIndex}, pupil, surfaces{pupilIndex+1:end}};
 pupilIndex = pupilIndex+1;
 %%  plot summary
 if display
-    source = sourceColumn(sourceAperture,3,1);
+    source = sourceColumn(aperture,3,1);
     source.units = 'mm';
     source.display = 'nm';
     options.negative = true;

@@ -2,17 +2,20 @@ if exist('OCTAVE_VERSION', 'builtin') ~= 0
   pkg load statistics;
 end
 %% Design parameters. Dimensions in mm.
-apertureDiameter = 6500;
-Fnum = 11;
+apertureDiameter = 3800;
+Fnum = 6;
+numRings = 2;
 secondaryDistance = 4000;
-backFocalLength = 4000; % distance behind m1 to prime focus, [mm]
+backFocalLength = 2000; % distance behind m1 to prime focus, [mm]
 segmentSize = 1500;
-segmentSpacing = 40;
+segmentSpacing = 50;
 % mag = 29.17, not used
 [prescription,aperture] = makeRCTelescope(apertureDiameter,Fnum,secondaryDistance,backFocalLength);
-prescription{1}.segments = makeHexSegments(prescription{1},[0,0],segmentSize,segmentSpacing,pi/6,3);
+prescription{1}.segments = makeHexSegments(prescription{1},[0,0],segmentSize,segmentSpacing,pi/6,numRings);
+prescription{1}.segments = {prescription{1}.segments{2:end}}; % no center
 aperture.units = 'mm';
-label = 'HabeEX RC';
+prescription{end}.display = 'nm';
+label = 'OpTIIXRC';
 %%
 Geometry = telescopeGeometry(label,prescription,aperture,true);
 save([label 'Geometry'],'Geometry');
@@ -48,6 +51,38 @@ end
 disp('M2 Corner cubes')
     disp(sprintf('[%g, %g, %g]\n',Geometry.m2CornerCubes'))
 
+%% test one degree of freedom
+source = sourceColumn(Geometry.aperture,99,1);
+trace = raytrace(source,prescription,options);
+trace = trace(2:end); %skip the source rays
+nomRays = trace{end};
+[nomOPL,nomMask] = pupilOPL(nomRays,false);
+[rmswfe,piston] = rmsWFE(nomOPL,nomMask);
+perturbationScale = 1e-3*[1,1,1,.001,.001,.001];
+perturbations = diag(perturbationScale); % 1 nm and 1 nanoradians
+labels = {'Local \Deltax','Local \Deltay','Local \Deltaz','Local \thetaX','Local \thetaY','Local \thetaZ'};
+unitLabels = {'nm/um','nm/um','nm/um','nm/urad','nm/urad','nm/urad'};
+options.negative=true; %trace backward at end from focal plane to pupil relay surface for beamwalk reasons
+scale = 1000;
+labelScale = 1e6; %mm to nm
+figure(40);clf;
+for i=1:6
+  subplot(2,3,i)
+  sp = prescription;
+  for j=1:6
+  sp{1}.segments{j} = perturb(prescription{1}.segments{j},perturbations(i,:),true);
+  end
+  prays=lastCell(raytrace(source,sp,options));
+  [opl,m] = pupilOPL(prays,false);
+
+  pwf = opl - nomOPL;
+  pwf(~nomMask(:))=NaN;
+  imagesc(scale*pwf); axis image; colorbar;
+  title(sprintf("%s %.3d %s",labels{i},labelScale*sqrt(mean(pwf(nomMask(:)).^2)),unitLabels{i}));
+end
+%title(sprintf('All perturbations %s rms/um',surfaces{1}.segments{j}.name,units));
+
+
 %%
 nPoints = 1024;
 tic
@@ -57,7 +92,7 @@ toc
 save([label 'Sensitivity'],'Sensitivity');
 
 %%
-figure(1);clf;
+figure(6);clf;
 offsets = [0 0 2 0 0 0];
 
 scale = 1/Sensitivity.perturbations(1);
@@ -71,10 +106,11 @@ for i=1:6
     if dz
         wfe = pupilOffset(wfe,Sensitivity.nomMask,dz/scale);
     end
+    wfe(~Sensitivity.nomMask) = NaN;
     img=imagesc(scale*wfe); axis image;
     h = colorbar;
     title(h,Sensitivity.unitLabels{i});
-    set(img,'AlphaData',Sensitivity.nomMask);
+%    set(img,'AlphaData',Sensitivity.nomMask);
     if dz
         title([Sensitivity.labels{i} ' (offset ' num2str(dz) ')']);
     else

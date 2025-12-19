@@ -38,12 +38,12 @@ toc
 %
 clf; subplot(2,2,[1 2]);
 plotSurfaces(trace);
-axis equal; sideview
+axis equal;
 hold on;plotRays(trace,'b');hold off;
 
 %%
 subplot(2,2,3);
-[wfe,mask] = pupilWFE(trace{end});
+[wfe,mask] = pupilWFE(trace{end},false);
 displayPupil(wfe,mask);colorbar
 
 subplot(2,2,4);

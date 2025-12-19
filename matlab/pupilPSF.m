@@ -1,4 +1,4 @@
-function psf = pupilPSF(opd, amplitude, bands, intensities, focalLength, npix, pupilSamplingDistance, pixelSize)
+function [psf,opd,amplitude] = pupilPSF(opd, amplitude, bands, intensities, focalLength, npix, pupilSamplingDistance, pixelSize)
 % this method was developed by Andy Kee. The built-in FFT function
 % uniformly samples frequencies with interval 1/n. But we don't want that!
 % We only want the intervals that correspond to pixels. Using FFT to
@@ -11,11 +11,11 @@ if iscell(opd)
 end
 if isstruct(opd)
     rays = opd;
-    [ opd, amplitude] = pupilWFE(opd);
+    [ opd, amplitude] = pupilWFE(opd,false);
 elseif nargin < 2
     amplitude = ~isnan(opd);
 end
-if nargin < 3 
+if nargin < 3
     bands = [];
 end
 if isempty(bands)
@@ -28,24 +28,28 @@ if isempty(intensities)
    intensities = ones(numel(bands),1)/numel(bands);
 end
 if nargin < 5
-    npix = 100;
+  if isstruct(rays)
+    focalLength = rays.opl(rays.chief);
+  else
+    focalLength = 100; %makes for a nice picture
+  end
 end
 if nargin < 6
-     if isstruct(rays) && isfield(rays.samplingDistance)
-        samplingDistance = rays.samplingDistance;
+    npix = 20;
+end
+if nargin < 7
+     if isstruct(rays) && isfield(rays,'samplingDistance')
+        pupilSamplingDistance = rays.samplingDistance;
      else
          pupilSamplingDistance = 1; % mm
      end
 end
-if nargin < 7
-    if isstruct(rays) && isfield(rays.pixelSize)
+if nargin < 8
+    if isstruct(rays) && isfield(rays,'pixelSize')
         pixelSize = rays.pixelSize;
     else
         pixelSize = 0.010; % 10 micron
     end
-end
-if nargin < 8
-    focalLength = 100; %makes for a nice picture
 end
 
 sampling = pupilSamplingDistance .* pixelSize / focalLength;
@@ -65,6 +69,7 @@ V = (-(M-1)/2:(M-1)/2)';
 
 psf = zeros(M,N);
 
+% lentil uses  ( diameter/npix_pup_diam*pixel_size)/(wave*focal_length*oversample)
 for k = 1:length(bands)
     lambda = bands(k);
     alpha = sampling./lambda;

@@ -8,12 +8,10 @@ function [pupil,tip,tilt,piston] = rmTTP( pupil, mask )
 s = size(pupil);
 
 if nargin < 2
-    mask = (pupil ~= 0);
+    mask = (pupil ~= 0) & (pupil ~= NaN);
+elseif isempty(mask)
+    mask = ~isnan(pupil);
 end
-
-piston = mean(pupil(mask(:)));
-
-pupil = mask .*(pupil - piston);
 
 m = s(2)-1;
 x = 2*((0:m) - (m/2))/s(2);
@@ -22,19 +20,17 @@ n = s(1)-1;
 x = 2*((0:n) - (n/2))/s(1);
 tilt = repmat(x',1,s(2));
 
-an = sum(sum(mask.*(tip.*tip)));
+%an = sum(sum(mask.*(tip.*tip)));
+piston = mean(pupil(mask(:)));
+pupil(mask(:)) -= piston;
 
-a = sum(sum(pupil .* tip));
-% pupil(mask(:)) =  (pupil(mask(:)) - (a/an .* tip(mask(:)) ));
-pupil = mask .* (pupil - (a/an .* tip ));
+an = sum(tip(mask(:)).^2);
+a = pupil(mask(:))' * tip(mask(:));
+pupil(mask(:)) -= (a/an .* tip(mask(:))) ;
 
-bn = sum(sum(mask.*(tilt.*tilt)));
-
-b = sum(sum(pupil .* tilt));
-% pupil(mask(:)) = ( pupil(mask(:)) - (b/bn .* tilt(mask(:))));
-pupil = mask .* ( pupil - (b/bn .* tilt));
-
-%pupil(mask(:)) = pupil(mask(:)) - piston);
+bn = sum(tilt(mask(:)).^2);
+b = pupil(mask(:))' * tilt(mask(:));
+pupil(mask(:)) -= (b/bn .* tilt(mask(:)));
 
 tip = a/an;
 tilt = b/bn;

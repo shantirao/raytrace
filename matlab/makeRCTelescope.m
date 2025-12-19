@@ -4,23 +4,24 @@ function [surfaces,aperture] = makeRCTelescope(apertureDiameter,Fnumber,secondar
 
 % also http://www.telescope-optics.net/two-mirror.htm
 focalLength = Fnumber * apertureDiameter;
+disp(sprintf('Focal length %g mm',focalLength));
 
 % if where the pieces go is constrained and the m1 focal length can change
 backFocalLength = secondaryDistance + focusDistance;
 primaryFocalLength =  ( focalLength * secondaryDistance)/(-backFocalLength + focalLength - secondaryDistance);
 
-% or maybe you have a particular f/number in mind for the  primary, 
+% or maybe you have a particular f/number in mind for the  primary,
 % because of coating polarization concerns
 % primaryFocalLength = Fnum1 * apertureDiameter; % focal length of the primary
 
-% secondaryDistance = primaryFocalLength * (EFL - focusDistance)/(EFL + primaryFocalLength); 
+% secondaryDistance = primaryFocalLength * (EFL - focusDistance)/(EFL + primaryFocalLength);
 
 Q = focalLength-backFocalLength-secondaryDistance; % distance from secondary vertex to focus
 
 % m1 radius of curvature
-R1 = 2*secondaryDistance*focalLength/(focalLength-backFocalLength); 
+R1 = 2*secondaryDistance*focalLength/(focalLength-backFocalLength);
 % m2 radius of curvature
-R2 = 2*secondaryDistance*backFocalLength/Q; 
+R2 = 2*secondaryDistance*backFocalLength/Q;
 
 K1 = -1; % parabola
 M = (focalLength-backFocalLength)/secondaryDistance; % secondary magnification
@@ -39,7 +40,7 @@ Fnum1 = primaryFocalLength / apertureDiameter;
 
 %% Prescription details
 
-disp(sprintf('optic\tD   \tZ   \tR   \tK   \tEFL \tFnum'));
+disp(sprintf('optic\tD   \tZ   \tR   \tK   \tFL \tFnum'));
 disp(sprintf('M1   \t0   \t0   \t%.5g\t%.5g\t%.5g\t%.5g',R1,K1,primaryFocalLength,Fnum1));
 disp(sprintf('M2   \t%.5g\t%.5g\t%.5g\t%.5g\t%.5g',secondaryDistance,secondaryDistance,R2,K2));
 disp(sprintf('PF   \t%.5g\t%.5g\t-\t-\t%.5g\t%.5g',backFocalLength,-focusDistance,focalLength,Fnumber));

@@ -1,8 +1,15 @@
-function [rmswfe, piston] = rmsWFE(pupil,mask) 
+function [rmswfe, piston] = rmsWFE(pupil,mask)
 %     opd = pupil(:);
 %     opd = opd(mask(:)); %reshape(pupil.*mask,1,numel(mask));
 
     % opd = opd(rays.valid);
+if iscell(pupil)
+  pupil = pupil{end};
+end
+if nargin > 1 && isempty(mask)
+  mask = ~isnan(pupil);
+end
+
 if isstruct(pupil) % rays
     opd = pupil.opl(pupil.valid(:));
     piston = mean(opd);

@@ -41,8 +41,7 @@ toc
 %
 clf;
 subplot(2,2,[1 2]);
-plotSurfaces(trace);
-axis equal; sideview
+plotSurfaces(trace);axis equal;
 hold on;plotRays(trace,'b');hold off;
 
 %%

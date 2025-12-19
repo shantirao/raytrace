@@ -28,29 +28,35 @@ end
 
 [scale, units] = displayScaleFactor(rays);
 
-rmswfe = rmsWFE(pupil,mask);
 
-wfe = pupilOffset(pupil,mask,-mean(pupil(mask(:))));
+%always removes piston
+%if rmttp
+  wfe = pupilOffset(pupil,mask,-mean(pupil(mask(:))));
+%else
+%  wfe = pupil;
+%end
+rmswfe = rmsWFE(wfe,mask);
+wfe(~mask(:))=NaN; % alternative to AlphaData for Octave
 
 if nargin > 3
-    img = imagesc(scale*wfe,scale*clim); 
+    img = imagesc(scale*wfe,scale*clim);
 else
-    img = imagesc(scale*wfe); 
+    img = imagesc(scale*wfe);
 end
-set(img,'AlphaData',mask)
-axis image; 
+%set(img,'AlphaData',mask)
+axis image;
 set(gca,'XTick',[]);
 set(gca,'YTick',[]);
 % if isfield(rays,'units')
 
-if rmttp
-    title(sprintf('%s %.5g %s rms, tip %g, tilt %g ',caption,scale*rmswfe,units,tip/rays.aperture,tilt/rays.aperture));
-else    
-    title(sprintf('%s %.5g %s rms',caption,scale*rmswfe,units));
-end
+%if rmttp
+    title(sprintf('%s %.5g %s rms, tip %g, tilt %g ',caption,scale*rmswfe,units,tip,tilt));
+%else
+%    title(sprintf('%s %.5g %s rms',caption,scale*rmswfe,units));
+%end
 % else
 %     title([caption ': ' num2str(rmswfe) ' rms']);
 % end
-% colorbar; 
+% colorbar;
 end
 

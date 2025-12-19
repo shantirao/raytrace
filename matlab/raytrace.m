@@ -1,15 +1,15 @@
-function [trace, distance, projection, elevation] = raytrace(rays, surface, options)
-%raytrace(rays,surfaces,options) Finds where rays hit a surface. 
+function [lightpath, distance, projection, elevation] = raytrace(rays, surface, options)
+%raytrace(rays,surfaces,options) Finds where rays hit a surface.
 % {rays} = raytrace2(start,{surface list},options)
-%Input: rays [struct] 
+%Input: rays [struct]
 %       rays.position [Nx3]: positions
-%       rays.direction [Nx3]: direction * index
-%       rays.n: index
-%       rays.n2: index^2
+%       rays.direction [Nx3]: direction * validRays
+%       rays.validRays: validRays of refraction
+%       rays.n2: validRays^2
 %       rays.local [Nx3]: local horizontal polarization vector, or TE
 %       	vector. Each interface involves a coordinate frame rotation
 %       	depending on the plane of incidence
-%       rays.polarization [Nx4]: Stokes parameters S0..3 for the rays 
+%       rays.polarization [Nx4]: Stokes parameters S0..3 for the rays
 %           Default [ones(N,1) zeros(N,3)] for unpolarized light
 %
 %       surface [struct] or cell array {struct, struct...}
@@ -20,7 +20,7 @@ function [trace, distance, projection, elevation] = raytrace(rays, surface, opti
 %                       2: refractive
 %                       4: polarization - reflection if surface.NK is
 %                       defined; otherwise reflection and transmission.
-%       surface.display [text]: override display units for this surface 
+%       surface.display [text]: override display units for this surface
 %                       nm, um, mm, m
 %       surface.segments {}: if present, nonsequential raytrace of segments
 %                        could mix reflective, refractive, and stops.
@@ -28,8 +28,8 @@ function [trace, distance, projection, elevation] = raytrace(rays, surface, opti
 %                        prescription but the container's surface.center
 %                        field propagates through to make it easy to move
 %                        off-axis apertures around
-%       surface.n [1x1]: next index of refraction
-%       surface.NK [1xM]: complex mirror surface index for M wavelengths
+%       surface.n [1x1]: next validRays of refraction
+%       surface.NK [1xM]: complex mirror surface validRays for M wavelengths
 %       surface.position [1x3]: vertex point
 %       surface.direction [1x3]: surface normal at vertex
 %       surface.cuy [1x1]: curvature in y (semi-latus rectum) = 1/ROC
@@ -44,22 +44,22 @@ function [trace, distance, projection, elevation] = raytrace(rays, surface, opti
 %                             (defaults to 0,0)
 %       surface.local [2x3]: local coordinate system [ x ; y ], both
 %                            orthogonal to surface.direction
-%       surface.aperture [1x1]: aperture radius 
+%       surface.aperture [1x1]: aperture radius
 %                        [1x2]: [inner, outer] for an annulus
 %                        [1x3]: [inner, semiMinor, semiMajor] ellipse (not yet)
 %                        [2x2]: [u1 v1; u2 v2] rectangle (local coords)
 %                        [Mx2]: [u1 v1; u2 v2; ... ] polygon (local coords)
 %       surface.aperture.type == 'pie':
 %                               .radius = [inner outer]
-%                               .edges = [x1 y1; x2 y2] unit vectors describing the edges 
+%                               .edges = [x1 y1; x2 y2] unit vectors describing the edges
 %                               .gap = [g1, g2] edge offset
-%                               .origin = [u1 v1] 
+%                               .origin = [u1 v1]
 %                                   parent center, not the segment's center
 %                                   of rotation
 %       surface.asphere [1xN]: even asphere coefficients a2 s^2 + ...
 %                                  a4 s^4 + a6 s^6 + ...
 %       surface.zernike [1xN]: Zernike coefficients (not implemented)
-%       surface.deformation [struct]:  see deformSurface.m 
+%       surface.deformation [struct]:  see deformSurface.m
 %            deformation.origins [3xN]: mesh points that lie on surface
 %            deformation.displacement[3xN]: vector displacement of each coordinate
 %            deformation.displacement[1xN]: optical sag of each coordinate
@@ -89,8 +89,8 @@ function [trace, distance, projection, elevation] = raytrace(rays, surface, opti
 %        rays.distance [Nx3]: RSI
 %        rays.opl [Nx1]: optical path length
 %        rays.valid [Nx1]: boolean: valid ray or not?
-%        rays.n2: index^2 after last surface
-%        rays.n: index after last surface
+%        rays.n2: validRays^2 after last surface
+%        rays.n: validRays after last surface
 %        rayys.pixels [Nx3]: which pixels the rays land on
 %        rays.cos: rays.direction . surface.N / rays.n;
 %        rays.status: >0: stopped at surface N
@@ -105,10 +105,10 @@ function [trace, distance, projection, elevation] = raytrace(rays, surface, opti
 %        elevation [Nx1]: distance to the tangent plane
 
 %   to do:
-%       rays.lambda [1xM]: optional vector of wavelengths to 
+%       rays.lambda [1xM]: optional vector of wavelengths to
 %       rays.phase [NxM]: optional complex amplitude & phase (wavelength-dependent)
 %               initialize as 1+0i, multiply by -1 at each reflection
-%       rays {cell array}: iterate trace over multiple ray bundles
+%       rays {cell array}: iterate lightpath over multiple ray bundles
 % Add Zernike, mesh, grid perturbations
 % GPU is very slow. parallel across CPUs is better
 
@@ -126,44 +126,44 @@ if nargin < 3
     options.debug = false;
 end
 
-if iscell(rays) % parallel
+if iscell(rays) % parallel starting with different sets of rays
     if options.parallel
-        trace = parmap(@(r)raytrace(r,surface,options),rays);
+        lightpath = parmap(@(r)raytrace(r,surface,options),rays);
     else
-        trace = cell(numel(rays));
+        lightpath = cell(numel(rays));
         for i=1:numel(surface)
-        	trace{i} = raytrace(rays{i},surface,options);
+        	lightpath{i} = raytrace(rays{i},surface,options);
         end
     end
 elseif iscell(surface) % series
     N = numel(surface);
-    trace = cell(1,N+1); 
-    trace{1}=rays;
+    lightpath = cell(1,N+1);
+    lightpath{1}=rays;
     source = rays;
     for i=1:numel(surface)
        rays = raytrace(rays,surface{i},options);
        if isfield(source,'display') && ~isfield(surface{i},'display')
             rays.display = source.display; %source units override surface units
        end
-       trace{i+1} = rays;
+       lightpath{i+1} = rays;
     end
 elseif (~isfield(options,'segments') || (isfield(options,'segments') && options.segments)) && ...
-    isfield(surface,'segments') && iscell(surface.segments) && numel(surface.segments) 
+    isfield(surface,'segments') && iscell(surface.segments) && numel(surface.segments)
 % parallel
     if (isfield(options,'parallel') && options.parallel)
         [R, D, P, E] = parmap(@(s)raytrace(rays,s,options),surface.segments);
     else
         [R, D, P, E] = map(@(s)raytrace(rays,s,options),surface.segments);
     end
-   
+
     if iscell(R)
         rays = R{1};
-    else 
+    else
         rays = R;
     end
     rays.surface = surface;
     % use rays.valid to collapse the other traces
-    
+
     distance = D{1};
     projection = P{1};
     elevation = E{1};
@@ -173,20 +173,20 @@ elseif (~isfield(options,'segments') || (isfield(options,'segments') && options.
         d = D{i};
         p = P{i};
         e = E{i};
-        index = find(r.valid); %slightly faster than a binary map
-        distance(index,:) = d(index,:);
-        projection(index,:) = p(index,:);
-        elevation(index,:) = e(index,:);
-        rays.opl(index,:) = r.opl(index,:);
-        rays.position(index,:) = r.position(index,:);
-        rays.direction(index,:) = r.direction(index,:);
-        if isfield(r,'map'), rays.map(index,:) = r.map(index,:); end
-        if isfield(r,'status'), rays.status(index,:) = r.status(index,:); end
-        rays.segment(index,:) = i; 
-        rays.valid(index,:) = true;
+        validRays = find(r.valid); %slightly faster than a binary map
+        distance(validRays,:) = d(validRays,:);
+        projection(validRays,:) = p(validRays,:);
+        elevation(validRays,:) = e(validRays,:);
+        rays.opl(validRays,:) = r.opl(validRays,:);
+        rays.position(validRays,:) = r.position(validRays,:);
+        rays.direction(validRays,:) = r.direction(validRays,:);
+        if isfield(r,'map'), rays.map(validRays,:) = r.map(validRays,:); end
+        if isfield(r,'status'), rays.status(validRays,:) = r.status(validRays,:); end
+        rays.segment(validRays,:) = i;
+        rays.valid(validRays,:) = true;
     end
-    trace = rays;
+    lightpath = rays;
 else % propagate one ray bundle to one surface
-    [trace, distance, projection, elevation] = propagateRays(rays, surface, options);
+    [lightpath, distance, projection, elevation] = propagateRays(rays, surface, options);
 end
 

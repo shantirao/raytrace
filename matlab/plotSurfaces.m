@@ -1,28 +1,28 @@
-function plotSurfaces(trace)
+function plotSurfaces(lightpath)
 %plotSurfaces(start,finish)
 
 xlabel('x');ylabel('y');zlabel('z');
 
-if ~iscell(trace)
-    trace = {null,trace};
+if ~iscell(lightpath)
+    lightpath = {null,lightpath};
 end
 
 hold on;
-for i=2:numel(trace)
-    if max(trace{i}.position,[],1) ~= [0,0,0]       
-        v = trace{i}.valid;
-%         if isfield(trace{i},'surface') && isfield(trace{i},'local')
-%             x = trace{i}.position(v,:) * trace{i}.local(1,:)';
-%             y = trace{i}.position(v,:) * trace{i}.local(2,:)';
-%             z = trace{i}.position(v,:) * trace{i}.surface.direction';
+for i=2:numel(lightpath)
+    if max(lightpath{i}.position,[],1) ~= [0,0,0]
+        v = lightpath{i}.valid;
+%         if isfield(lightpath{i},'surface') && isfield(lightpath{i},'local')
+%             x = lightpath{i}.position(v,:) * lightpath{i}.local(1,:)';
+%             y = lightpath{i}.position(v,:) * lightpath{i}.local(2,:)';
+%             z = lightpath{i}.position(v,:) * lightpath{i}.surface.direction';
 %         else
-            x = trace{i}.position(v,1);
-            y = trace{i}.position(v,2);
-            z = trace{i}.position(v,3);
+            x = lightpath{i}.position(v,1);
+            y = lightpath{i}.position(v,2);
+            z = lightpath{i}.position(v,3);
 %         end
-        if ~isempty(x) 
-            if isfield(trace{i},'segment')
-                s = trace{i}.segment(v);
+        if ~isempty(x)
+            if isfield(lightpath{i},'segment')
+                s = lightpath{i}.segment(v);
                 mn = min(s(:));
                 mx = max(s(:));
                 for j=mn:mx
@@ -53,6 +53,9 @@ function drawSurface(x,y,z, select)
     if ~isCollinear(x) && ~isCollinear(y)
         tri = delaunay(x,y);
         h = trisurf(tri,x,y,z,'EdgeColor','none','FaceVertexCData',[1,0,0]); %,'CDataMapping','direct');
-        alpha(.5)
+%        alpha(.5)
+set(h,'edgecolor','none')
+set(h,'facealpha',0.5)
+
     end
 end

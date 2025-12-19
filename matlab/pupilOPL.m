@@ -1,6 +1,6 @@
-function [ pupil,mask,tip,tilt] = pupilOPL(rays,rmttp)
+function [ pupil,mask,tip,tilt] = pupilOPL(rays,rmTipTilt,setnan)
 %pupilOPL pupilOPL(rays) returns cumulative optical path difference
-% rmttp is whether to remove the Tip/Tilt/Piston (defaults to false)
+% rmTipTilt is whether to remove the Tip/Tilt (defaults to false)
 
 % pupil = full(sparse(rays.map(:,1),rays.map(:,2),rays.opl(:)));
 % mask = full(sparse(rays.map(:,1),rays.map(:,2),true));
@@ -18,13 +18,16 @@ if rays.maskSize(1) ~= sz(1)
     mask = [mask; false(rays.maskSize(1)-sz(1),sz(2))];
 end
 % if isfield(rays,'surface') && isfield(rays.surface,'opdOffset')
-%     pupil(mask) = pupil(mask) + rays.surface.opdOffset; 
+%     pupil(mask) = pupil(mask) + rays.surface.opdOffset;
 % end
 % not the most elegant way of doing it
-if nargin > 1 && rmttp
+if nargin > 1 && rmTipTilt
     [pupil,tip,tilt] = rmTTP(pupil,mask);
 else
-    tip=[];tilt=[];
+    [~,tip,tilt] = rmTTP(pupil,mask);
+end
+if nargin > 2 && setnan
+  pupil(~mask(:)) = NaN;
 end
 
 end
